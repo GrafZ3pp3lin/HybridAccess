@@ -4,7 +4,7 @@ module(..., package.seeall)
 
 local pcap = require("apps.pcap.pcap")
 local raw = require("apps.socket.raw")
-local roundrobin = require("program.hybrid_access.roundrobin")
+local roundrobin = require("program.hybrid_loadbalancer.roundrobin")
 
 function run (parameters)
    if not (#parameters == 3) then

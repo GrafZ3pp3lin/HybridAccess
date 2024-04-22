@@ -1,15 +1,19 @@
 module(..., package.seeall)
 
 local link = require("core.link")
+local loadbalancer = require("program.hybrid_loadbalancer.loadbalancer")
 
-RoundRobin = LoadBalancer:new()
+RoundRobin = {}
 
 function RoundRobin:new()
     local o = {
         flip = false
     }
-    return setmetatable(o, {__index = RoundRobin})
- end
+    setmetatable(o, self)
+    self.loadbalancer = loadbalancer.LoadBalancer:new()
+    self.__index = self
+    return o
+end
 
 function RoundRobin:push()
     local i = assert(self.input.input, "input port not found")
@@ -18,19 +22,15 @@ function RoundRobin:push()
 
     while not link.empty(i) do
         self:process_packet(i, o1, o2)
-        self.sequence_number = self.sequence_number + 1
     end
 end
 
 function RoundRobin:process_packet(i, o1, o2)
     local p = link.receive(i)
-
-    local header = {}
-
     if self.flip then
-        link.transmit(o1, p)
+        self.loadbalancer:send_pkt(p, o1, 0)
     else
-        link.transmit(o2, p)
+        self.loadbalancer:send_pkt(p, o2, 0)
     end
     self.flip = not self.flip
 end

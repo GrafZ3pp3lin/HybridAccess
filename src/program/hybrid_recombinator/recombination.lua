@@ -4,71 +4,74 @@ local packet = require("core.packet")
 local link = require("core.link")
 local ffi = require("ffi")
 local bit = require("bit")
-local lshift, band =
-    bit.lshift, bit.band
+local lshift, bor =
+    bit.lshift, bit.bor
 
 local HEADER_SIZE = 8
-local header_pointer_ctype = ffi.typeof("uint8_t*")
 
 Recombination = {}
 
 function Recombination:new ()
     local o = {
-        last_pkt_num = 0
+        next_pkt_num = 0
     }
     return setmetatable(o, {__index = Recombination})
 end
 
 function Recombination:push()
-    local i1 = assert(self.input.input1, "input port 1 not found")
-    local i2 = assert(self.input.input2, "input port 2 not found")
-    local o = assert(self.output.output, "output port not found")
+    local input1 = assert(self.input.input1, "input port 1 not found")
+    local input2 = assert(self.input.input2, "input port 2 not found")
+    local output = assert(self.output.output, "output port not found")
 
     local last_pkt_num_i1, last_pkt_num_i2 = -1, -1
-    local i1_pkts = not link.empty(i1)
-    local i2_pkts = not link.empty(i2)
+    local i1_pkts = not link.empty(input1)
+    local i2_pkts = not link.empty(input2)
+    local found_next = false
 
     while i1_pkts or i2_pkts do
-        local found_next = false
-        local next_pkt_num = self.last_pkt_num + 1
+        found_next = false
 
         if i1_pkts then
-            local p = link.front(i1)
+            local p = link.front(input1)
             local seq_num, _, _ = self:read_header(p)
             last_pkt_num_i1 = seq_num
-            if seq_num == next_pkt_num then
-                self:process_packet(i1, o, seq_num)
+            if seq_num == self.next_pkt_num then
+                self:process_packet(input1, output, seq_num)
                 found_next = true
             end
         end
         if not found_next and i2_pkts then
-            local p = link.front(i1)
+            local p = link.front(input2)
             local seq_num, _, _ = self:read_header(p)
             last_pkt_num_i2 = seq_num
-            if seq_num == next_pkt_num then
-                self:process_packet(i1, o, seq_num)
+            if seq_num == self.next_pkt_num then
+                self:process_packet(input2, output, seq_num)
                 found_next = true
             end
         end
         if not found_next and i1_pkts and i2_pkts then
             if last_pkt_num_i1 < last_pkt_num_i2 then
-                self:process_packet(i1, o, last_pkt_num_i1)
+                self:process_packet(input1, output, last_pkt_num_i1)
             else
-                self:process_packet(i2, o, last_pkt_num_i2)
+                self:process_packet(input2, output, last_pkt_num_i2)
             end
             found_next = true
         end
         if not found_next then
             break
         end
+
+        i1_pkts = not link.empty(input1)
+        i2_pkts = not link.empty(input2)
     end
 end
 
 function Recombination:process_packet(input, output, pkt_num)
     local p = link.receive(input)
+    print(p.data[0], p.data[1], p.data[2], p.data[3], p.data[4], p.data[5], p.data[6], p.data[7])
     p = packet.shiftleft(p, HEADER_SIZE)
     link.transmit(output, p)
-    self.last_pkt_num = pkt_num
+    self.next_pkt_num = pkt_num + 1
 end
 
 ---comment
@@ -81,17 +84,17 @@ function Recombination:read_header(p)
         error("packet does not contain a header")
     end
 
-    local header_pointer = ffi.cast(header_pointer_ctype, p.data)
-    local sequence_number = lshift(header_pointer[0], 24);
-    sequence_number = band(sequence_number, lshift(header_pointer[1], 16));
-    sequence_number = band(sequence_number, lshift(header_pointer[2], 8));
-    sequence_number = band(sequence_number, header_pointer[3]);
+    local header = p.data
+    local sequence_number = lshift(header[0], 24);
+    sequence_number = bor(sequence_number, lshift(header[1], 16));
+    sequence_number = bor(sequence_number, lshift(header[2], 8));
+    sequence_number = bor(sequence_number, header[3]);
 
-    local length = lshift(header_pointer[4], 16)
-    length = band(length, lshift(header_pointer[5], 8))
-    length = band(length, header_pointer[6])
+    local length = lshift(header[4], 16)
+    length = bor(length, lshift(header[5], 8))
+    length = bor(length, header[6])
 
-    local type = header_pointer[7]
+    local type = header[7]
 
     return sequence_number, length, type
 end

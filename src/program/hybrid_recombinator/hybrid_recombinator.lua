@@ -19,12 +19,12 @@ function run (parameters)
    config.app(c, "in1", raw.RawSocket, input1)
    config.app(c, "in2", raw.RawSocket, input2)
    config.app(c, "recombination", recombination.Recombination)
-   config.app(c, "out", pcap.PcapWriter, output)
+   config.app(c, "capture", pcap.PcapWriter, output)
 
    config.link(c, "in1.tx -> recombination.input1")
    config.link(c, "in2.tx -> recombination.input2")
-   config.link(c, "recombination.output -> out.input")
+   config.link(c, "recombination.output -> capture.input")
 
    engine.configure(c)
-   engine.main({duration=1, report = {showlinks=true}})
+   engine.main({duration=10, report = {showlinks=true}})
 end
