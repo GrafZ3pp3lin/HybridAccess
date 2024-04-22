@@ -10,8 +10,8 @@ function Sprayer:new ()
 end
 
 function Sprayer:push()
-   local i = assert(self.input.input, "input port not found")
-   local o = assert(self.output.output, "output port not found")
+   local i = assert(self.input.in1, "input port not found")
+   local o = assert(self.output.out1, "output port not found")
 
    while not link.empty(i) do
       self:process_packet(i, o)

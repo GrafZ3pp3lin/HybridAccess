@@ -1,0 +1,12 @@
+{
+    "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+    "workspace.library": ["lib"],
+    "runtime.version": "LuaJIT",
+    "hint.enable": false,
+    "workspace.ignoreDir": [
+        ".vscode",
+        "lib",
+        "src/apps",
+        "src/program"
+    ]
+  }
