@@ -7,24 +7,24 @@ local raw = require("apps.socket.raw")
 local roundrobin = require("program.hybrid_loadbalancer.roundrobin")
 
 function run (parameters)
-   if not (#parameters == 3) then
-      print("Usage: example_spray <input> <output1> <output2>")
-      main.exit(1)
-   end
-   local input = parameters[1]
-   local output1 = parameters[2]
-   local output2 = parameters[3]
+    if not (#parameters == 3) then
+        print("Usage: hybrid_loadbalancer <input> <output1> <output2>")
+        main.exit(1)
+    end
+    local input = parameters[1]
+    local output1 = parameters[2]
+    local output2 = parameters[3]
 
-   local c = config.new()
-   config.app(c, "capture", pcap.PcapReader, input)
-   config.app(c, "roundrobin", roundrobin.RoundRobin)
-   config.app(c, "out1", raw.RawSocket, output1)
-   config.app(c, "out2", raw.RawSocket, output2)
+    local c = config.new()
+    config.app(c, "capture", pcap.PcapReader, input)
+    config.app(c, "roundrobin", roundrobin.RoundRobin)
+    config.app(c, "out1", raw.RawSocket, output1)
+    config.app(c, "out2", raw.RawSocket, output2)
 
-   config.link(c, "capture.output -> roundrobin.input")
-   config.link(c, "roundrobin.output1 -> out1.rx")
-   config.link(c, "roundrobin.output2 -> out2.rx")
+    config.link(c, "capture.output -> roundrobin.input")
+    config.link(c, "roundrobin.output1 -> out1.rx")
+    config.link(c, "roundrobin.output2 -> out2.rx")
 
-   engine.configure(c)
-   engine.main({duration=1, report = {showlinks=true}})
+    engine.configure(c)
+    engine.main({duration=1, report = {showlinks=true}})
 end

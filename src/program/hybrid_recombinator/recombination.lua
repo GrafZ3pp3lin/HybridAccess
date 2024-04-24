@@ -2,7 +2,6 @@ module(..., package.seeall)
 
 local packet = require("core.packet")
 local link = require("core.link")
-local ffi = require("ffi")
 local bit = require("bit")
 local lshift, bor =
     bit.lshift, bit.bor
@@ -68,7 +67,7 @@ end
 
 function Recombination:process_packet(input, output, pkt_num)
     local p = link.receive(input)
-    print(p.data[0], p.data[1], p.data[2], p.data[3], p.data[4], p.data[5], p.data[6], p.data[7])
+    --print(p.data[0], p.data[1], p.data[2], p.data[3], p.data[4], p.data[5], p.data[6], p.data[7])
     p = packet.shiftleft(p, HEADER_SIZE)
     link.transmit(output, p)
     self.next_pkt_num = pkt_num + 1

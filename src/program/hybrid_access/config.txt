@@ -1,0 +1,4 @@
+link_out_1=veth0
+link_out_2=veth2
+link_in_1=veth1
+link_in_2=veth3
