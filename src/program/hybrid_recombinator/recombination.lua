@@ -14,7 +14,9 @@ function Recombination:new ()
     local o = {
         next_pkt_num = 0
     }
-    return setmetatable(o, {__index = Recombination})
+    setmetatable(o, self)
+    self.__index = self
+    return o
 end
 
 function Recombination:push()

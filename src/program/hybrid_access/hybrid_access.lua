@@ -4,8 +4,9 @@ module(..., package.seeall)
 
 local lib = require("core.lib")
 local raw = require("apps.socket.raw")
-local basic_apps = require("apps.basic.basic_apps")
-local roundrobin = require("program.hybrid_loadbalancer.roundrobin")
+local sink = require("program.hybrid_access.base.ordered_sink")
+local source = require("program.hybrid_access.base.ordered_source")
+local w_roundrobin = require("program.hybrid_loadbalancer.weighted_roundrobin")
 local recombination = require("program.hybrid_recombinator.recombination")
 
 local function show_usage(status)
@@ -33,7 +34,31 @@ local function dump(o)
     else
        return tostring(o)
     end
- end
+end
+
+local function start(cfg)
+    local c = config.new()
+    config.app(c, "source", source.OrderedSource)
+    config.app(c, "loadbalancer", w_roundrobin.WeightedRoundRobin, {bandwidths={output1=100,output2=10}})
+    config.app(c, "out1", raw.RawSocket, cfg.link_out_1)
+    config.app(c, "out2", raw.RawSocket, cfg.link_out_2)
+
+    config.app(c, "in1", raw.RawSocket, cfg.link_in_1)
+    config.app(c, "in2", raw.RawSocket, cfg.link_in_2)
+    config.app(c, "recombination", recombination.Recombination)
+    config.app(c, "sink", sink.OrderedSink)
+
+    config.link(c, "source.output -> loadbalancer.input")
+    config.link(c, "loadbalancer.output1 -> out1.rx")
+    config.link(c, "loadbalancer.output2 -> out2.rx")
+
+    config.link(c, "in1.tx -> recombination.input1")
+    config.link(c, "in2.tx -> recombination.input2")
+    config.link(c, "recombination.output -> sink.input")
+
+    engine.configure(c)
+    engine.main({duration=2, report = {showlinks=true,showapps=true}})
+end
  
 
 function run (args)
@@ -52,25 +77,5 @@ function run (args)
 
     print(dump(cfg))
 
-    local c = config.new()
-    config.app(c, "source", basic_apps.Source)
-    config.app(c, "loadbalancer", roundrobin.RoundRobin)
-    config.app(c, "out1", raw.RawSocket, cfg.link_out_1)
-    config.app(c, "out2", raw.RawSocket, cfg.link_out_2)
-
-    config.app(c, "in1", raw.RawSocket, cfg.link_in_1)
-    config.app(c, "in2", raw.RawSocket, cfg.link_in_2)
-    config.app(c, "recombination", recombination.Recombination)
-    config.app(c, "output", basic_apps.Sink)
-
-    config.link(c, "source.output -> loadbalancer.input")
-    config.link(c, "loadbalancer.output1 -> out1.rx")
-    config.link(c, "loadbalancer.output2 -> out2.rx")
-
-    config.link(c, "in1.tx -> recombination.input1")
-    config.link(c, "in2.tx -> recombination.input2")
-    config.link(c, "recombination.output -> output.input")
-
-    engine.configure(c)
-    engine.main({duration=30, report = {showlinks=true,showapps=true}})
+    start(cfg)
 end

@@ -3,14 +3,13 @@ module(..., package.seeall)
 local link = require("core.link")
 local loadbalancer = require("program.hybrid_loadbalancer.loadbalancer")
 
-RoundRobin = {}
+RoundRobin = loadbalancer.LoadBalancer:new()
 
 function RoundRobin:new()
     local o = {
         flip = false
     }
     setmetatable(o, self)
-    self.loadbalancer = loadbalancer.LoadBalancer:new()
     self.__index = self
     return o
 end
@@ -28,9 +27,9 @@ end
 function RoundRobin:process_packet(i, o1, o2)
     local p = link.receive(i)
     if self.flip then
-        self.loadbalancer:send_pkt(p, o1, 0)
+        self:send_pkt(p, o1, 0)
     else
-        self.loadbalancer:send_pkt(p, o2, 0)
+        self:send_pkt(p, o2, 0)
     end
     self.flip = not self.flip
 end
