@@ -6,6 +6,7 @@ local lib = require("core.lib")
 local raw = require("apps.socket.raw")
 local sink = require("program.hybrid_access.base.ordered_sink")
 local source = require("program.hybrid_access.base.ordered_source")
+local dropper = require("program.hybrid_access.base.packet_dropper")
 local w_roundrobin = require("program.hybrid_loadbalancer.weighted_roundrobin")
 local recombination = require("program.hybrid_recombinator.recombination")
 
@@ -40,6 +41,7 @@ local function start(cfg)
     local c = config.new()
     config.app(c, "source", source.OrderedSource)
     config.app(c, "loadbalancer", w_roundrobin.WeightedRoundRobin, {bandwidths={output1=100,output2=10}})
+    config.app(c, "dropper1", dropper.PacketDropper, {mode="nth",value=100})
     config.app(c, "out1", raw.RawSocket, cfg.link_out_1)
     config.app(c, "out2", raw.RawSocket, cfg.link_out_2)
 
@@ -49,7 +51,8 @@ local function start(cfg)
     config.app(c, "sink", sink.OrderedSink)
 
     config.link(c, "source.output -> loadbalancer.input")
-    config.link(c, "loadbalancer.output1 -> out1.rx")
+    config.link(c, "loadbalancer.output1 -> dropper1.input")
+    config.link(c, "dropper1.output -> out1.rx")
     config.link(c, "loadbalancer.output2 -> out2.rx")
 
     config.link(c, "in1.tx -> recombination.input1")
@@ -57,7 +60,11 @@ local function start(cfg)
     config.link(c, "recombination.output -> sink.input")
 
     engine.configure(c)
-    engine.main({duration=2, report = {showlinks=true,showapps=true}})
+    local start = engine.now()
+    engine.main({duration=10, report = {showlinks=true,showapps=true}})
+    local stop = engine.now()
+    print("main report:")
+    print(string.format("%20s ms", (stop - start) * 1000))
 end
  
 

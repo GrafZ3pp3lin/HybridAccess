@@ -2,6 +2,7 @@ module(..., package.seeall)
 
 local ffi = require("ffi")
 local bit = require("bit")
+local lib = require("core.lib")
 local engine = require("core.app")
 local link = require("core.link")
 local packet = require("core.packet")
@@ -31,4 +32,11 @@ function OrderedSource:pull ()
         link.transmit(output, p)
         self.index = self.index + 1
     end
+end
+
+function OrderedSource:report ()
+    local output_stats = link.stats(self.output.output)
+
+    print(string.format("%20s packets generated", lib.comma_value(output_stats.txpackets)))
+    print(string.format("%20s bytes generated", lib.comma_value(output_stats.txbytes)))
 end

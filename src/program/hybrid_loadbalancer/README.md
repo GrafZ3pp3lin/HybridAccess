@@ -2,10 +2,9 @@
 
 ## Todo:
 * Recombination Function
-  * Ordering
+  * waiting / timeout
 
 * Scheduler / Loadbalancer
-  * Weighted Round Robin
   * Token Bucket
   * Toekn Bucket with Delay Difference Compensation
 
