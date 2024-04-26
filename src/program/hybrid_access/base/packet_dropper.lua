@@ -72,7 +72,7 @@ function PacketDropper:report ()
     local input_stats = link.stats(self.input.input)
     local output_stats = link.stats(self.output.output)
 
-    print(string.format("%20s packets in", lib.comma_value(input_stats.rxpackets)))
+    print(string.format("%20s packets in", lib.comma_value(input_stats.txpackets)))
     print(string.format("%20s packets out", lib.comma_value(output_stats.txpackets)))
     print(string.format("%20s packets dropped", lib.comma_value(counter.read(self.shm.dropped))))
 end

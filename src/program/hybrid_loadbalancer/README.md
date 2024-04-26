@@ -12,3 +12,5 @@
   * Rate
   * Queue
   * Delay
+
+sudo ip netns exec test

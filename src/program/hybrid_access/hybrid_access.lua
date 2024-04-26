@@ -26,22 +26,22 @@ end
 
 local function dump(o)
     if type(o) == 'table' then
-       local s = '{ '
-       for k,v in pairs(o) do
-          if type(k) ~= 'number' then k = '"'..k..'"' end
-          s = s .. '['..k..'] = ' .. dump(v) .. ','
-       end
-       return s .. '} '
+        local s = '{ '
+        for k, v in pairs(o) do
+            if type(k) ~= 'number' then k = '"' .. k .. '"' end
+            s = s .. '[' .. k .. '] = ' .. dump(v) .. ','
+        end
+        return s .. '} '
     else
-       return tostring(o)
+        return tostring(o)
     end
 end
 
 local function start(cfg)
     local c = config.new()
     config.app(c, "source", source.OrderedSource)
-    config.app(c, "loadbalancer", w_roundrobin.WeightedRoundRobin, {bandwidths={output1=100,output2=10}})
-    config.app(c, "dropper1", dropper.PacketDropper, {mode="nth",value=100})
+    config.app(c, "loadbalancer", w_roundrobin.WeightedRoundRobin, { bandwidths = { output1 = 100, output2 = 10 } })
+    config.app(c, "dropper1", dropper.PacketDropper, { mode = "nth", value = 100 })
     config.app(c, "out1", raw.RawSocket, cfg.link_out_1)
     config.app(c, "out2", raw.RawSocket, cfg.link_out_2)
 
@@ -61,14 +61,14 @@ local function start(cfg)
 
     engine.configure(c)
     local start = engine.now()
-    engine.main({duration=10, report = {showlinks=true,showapps=true}})
+    engine.main({ duration = 10, report = { showlinks = true, showapps = true } })
     local stop = engine.now()
     print("main report:")
     print(string.format("%20s ms", (stop - start) * 1000))
 end
- 
 
-function run (args)
+
+function run(args)
     local cfg
     if #args == 1 then
         cfg = read_config(args[1])

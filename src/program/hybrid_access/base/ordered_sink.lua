@@ -38,6 +38,6 @@ end
 function OrderedSink:report ()
     local input_stats = link.stats(self.input.input)
 
-    print(string.format("%20s packets received", lib.comma_value(input_stats.rxpackets)))
-    print(string.format("%20s bytes received", lib.comma_value(input_stats.rxbytes)))
+    print(string.format("%20s packets received", lib.comma_value(input_stats.txpackets)))
+    print(string.format("%20s bytes received", lib.comma_value(input_stats.txbytes)))
 end

@@ -2,29 +2,43 @@
 
 module(..., package.seeall)
 
-local pcap = require("apps.pcap.pcap")
 local raw = require("apps.socket.raw")
-local roundrobin = require("program.hybrid_loadbalancer.roundrobin")
+local ini = require("program.hybrid_access.base.ini")
+local source = require("program.hybrid_access.base.ordered_source")
+local dropper = require("program.hybrid_access.base.packet_dropper")
+local w_roundrobin = require("program.hybrid_loadbalancer.weighted_roundrobin")
 
-function run (parameters)
-    if not (#parameters == 3) then
-        print("Usage: hybrid_loadbalancer <input> <output1> <output2>")
-        main.exit(1)
+local function dump(o)
+    if type(o) == 'table' then
+        local s = '{ '
+        for k, v in pairs(o) do
+            if type(k) ~= 'number' then k = '"' .. k .. '"' end
+            s = s .. '[' .. k .. '] = ' .. dump(v) .. ','
+        end
+        return s .. '} '
+    else
+        return tostring(o)
     end
-    local input = parameters[1]
-    local output1 = parameters[2]
-    local output2 = parameters[3]
+end
+
+function run()
+    local cfg = ini.Ini:parse("/home/student/snabb/src/program/hybrid_loadbalancer/config.ini")
+    print(dump(cfg))
 
     local c = config.new()
-    config.app(c, "capture", pcap.PcapReader, input)
-    config.app(c, "roundrobin", roundrobin.RoundRobin)
-    config.app(c, "out1", raw.RawSocket, output1)
-    config.app(c, "out2", raw.RawSocket, output2)
+    config.app(c, "source", source.OrderedSource)
+    config.app(c, "loadbalancer", w_roundrobin.WeightedRoundRobin, { bandwidths = { output1 = 100, output2 = 10 } })
+    config.app(c, "dropper1", dropper.PacketDropper, { mode = "nth", value = 100 })
+    config.app(c, "out1", raw.RawSocket, cfg.link_out_1)
+    config.app(c, "out2", raw.RawSocket, cfg.link_out_2)
 
-    config.link(c, "capture.output -> roundrobin.input")
-    config.link(c, "roundrobin.output1 -> out1.rx")
-    config.link(c, "roundrobin.output2 -> out2.rx")
+    config.link(c, "source.output -> loadbalancer.input")
+    config.link(c, "loadbalancer.output1 -> dropper1.input")
+    config.link(c, "dropper1.output -> out1.rx")
+    config.link(c, "loadbalancer.output2 -> out2.rx")
 
     engine.configure(c)
-    engine.main({duration=1, report = {showlinks=true}})
+    print("start loadbalancer")
+    engine.main({ duration = cfg.duration, report = { showlinks = true, showapps = true } })
+    print("stop loadbalancer")
 end

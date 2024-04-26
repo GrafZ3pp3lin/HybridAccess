@@ -2,29 +2,40 @@
 
 module(..., package.seeall)
 
-local pcap = require("apps.pcap.pcap")
 local raw = require("apps.socket.raw")
+local ini = require("program.hybrid_access.base.ini")
 local recombination = require("program.hybrid_recombinator.recombination")
+local sink = require("program.hybrid_access.base.ordered_sink")
 
-function run (parameters)
-    if not (#parameters == 3) then
-        print("Usage: hybrid_recombination <input1> <output2> <output>")
-        main.exit(1)
+local function dump(o)
+    if type(o) == 'table' then
+        local s = '{ '
+        for k, v in pairs(o) do
+            if type(k) ~= 'number' then k = '"' .. k .. '"' end
+            s = s .. '[' .. k .. '] = ' .. dump(v) .. ','
+        end
+        return s .. '} '
+    else
+        return tostring(o)
     end
-    local input1 = parameters[1]
-    local input2 = parameters[2]
-    local output = parameters[3]
+end
+
+function run()
+    local cfg = ini.Ini:parse("/home/student/snabb/src/program/hybrid_recombinator/config.ini")
+    print(dump(cfg))
 
     local c = config.new()
-    config.app(c, "in1", raw.RawSocket, input1)
-    config.app(c, "in2", raw.RawSocket, input2)
+    config.app(c, "in1", raw.RawSocket, cfg.link_in_1)
+    config.app(c, "in2", raw.RawSocket, cfg.link_in_2)
     config.app(c, "recombination", recombination.Recombination)
-    config.app(c, "capture", pcap.PcapWriter, output)
+    config.app(c, "sink", sink.OrderedSink)
 
     config.link(c, "in1.tx -> recombination.input1")
     config.link(c, "in2.tx -> recombination.input2")
-    config.link(c, "recombination.output -> capture.input")
+    config.link(c, "recombination.output -> sink.input")
 
     engine.configure(c)
-    engine.main({report = {showlinks=true}})
+    print("start recombinator")
+    engine.main({ duration = cfg.duration, report = { showlinks = true, showapps = true } })
+    print("stop recombinator")
 end
