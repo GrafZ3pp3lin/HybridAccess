@@ -1,0 +1,8 @@
+[package]
+name = "example_rust"
+version = "0.1.0"
+
+[lib]
+name = "double_input"
+path = "test.rs"
+crate-type = ["dylib"]
