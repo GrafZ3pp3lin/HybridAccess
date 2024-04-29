@@ -16,7 +16,7 @@ function OrderedSink:new ()
    return o
 end
 
-function OrderedSink:push ()
+function OrderedSink:pull ()
     local input = self.input.input
     for _ = 1, link.nreadable(input) do
         local p = link.receive(input)

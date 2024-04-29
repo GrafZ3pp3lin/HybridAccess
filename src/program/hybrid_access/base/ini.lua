@@ -7,12 +7,15 @@ function Ini:parse(file_name)
 	local file = assert(io.open(file_name, 'r'), 'Error loading file : ' .. file_name);
 
     local content = {}
-    local section
+    local currentContent = content
     for line in file:lines() do
-        local temp_section = string.match(line, "^%[[%w_]+%]$")
+        local temp_section = string.match(line, "^%[([%w_%.]+)%]$")
         if temp_section then
-            section = temp_section
-            content[section] = content[section] or {}
+            currentContent = content
+            for str in string.gmatch(temp_section, "[^%.]+") do
+                currentContent[str] = currentContent[str] or {}
+                currentContent = currentContent[str]
+            end
         else
             local key, value = line:match('^([%w_]+)%s*=%s*(.+)$');
             if key and value ~= nil then
@@ -23,12 +26,11 @@ function Ini:parse(file_name)
                     value = true
                 elseif string.lower(value) == 'false' then
                     value = false
+                elseif string.lower(value) == 'nil' then
+                    value = nil
                 end
-                if section then
-                    content[section][key] = value
-                else
-                    content[key] = value
-                end
+
+                currentContent[key] = value
             end
         end
     end

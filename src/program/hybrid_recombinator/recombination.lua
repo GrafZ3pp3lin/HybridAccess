@@ -19,7 +19,7 @@ function Recombination:new ()
     return o
 end
 
-function Recombination:push()
+function Recombination:pull()
     local input1 = assert(self.input.input1, "input port 1 not found")
     local input2 = assert(self.input.input2, "input port 2 not found")
     local output = assert(self.output.output, "output port not found")
