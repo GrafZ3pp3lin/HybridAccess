@@ -44,10 +44,10 @@ function TokenBucket:push()
 
         if length <= self.contingent then
             self.contingent = self.contingent - length
-            self:send_pkt(p, o1, 0)
+            self:send_pkt(p, o1)
 
         else
-            self:send_pkt(p, o2, 0)
+            self:send_pkt(p, o2)
         end
     end
 end

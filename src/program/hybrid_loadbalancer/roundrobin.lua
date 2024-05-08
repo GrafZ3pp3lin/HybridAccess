@@ -27,9 +27,9 @@ end
 function RoundRobin:process_packet(i, o1, o2)
     local p = link.receive(i)
     if self.flip then
-        self:send_pkt(p, o1, 0)
+        self:send_pkt(p, o1)
     else
-        self:send_pkt(p, o2, 0)
+        self:send_pkt(p, o2)
     end
     self.flip = not self.flip
 end

@@ -45,12 +45,12 @@ end
 function WeightedRoundRobin:process_packet(i, o1, o2)
     local p = link.receive(i)
     if self.index < self.w1 then
-        self:send_pkt(p, o1, 0)
+        self:send_pkt(p, o1)
     elseif self.index < self.w2 then
-        self:send_pkt(p, o2, 0)
+        self:send_pkt(p, o2)
     else
         self.index = 0
-        self:send_pkt(p, o1, 0)
+        self:send_pkt(p, o1)
     end
     self.index = self.index + 1
 end

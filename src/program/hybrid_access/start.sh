@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ip netns exec test snabb hybrid_recombinator &
+ip netns exec net2 snabb hybrid_recombinator &
 snabb hybrid_loadbalancer
 
 wait 

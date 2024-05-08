@@ -1,12 +1,7 @@
 module(..., package.seeall)
 
-local packet = require("core.packet")
 local link = require("core.link")
-local bit = require("bit")
-local lshift, bor =
-    bit.lshift, bit.bor
-
-local HEADER_SIZE = 8
+local ha = require("program.hybrid_access.base.hybrid_access")
 
 Recombination = {}
 
@@ -25,6 +20,7 @@ function Recombination:pull()
     local output = assert(self.output.output, "output port not found")
 
     local last_pkt_num_i1, last_pkt_num_i2 = -1, -1
+    local last_eth_type_i1, last_eth_type_i2 = 0, 0
     local i1_pkts = not link.empty(input1)
     local i2_pkts = not link.empty(input2)
     local found_next = false
@@ -34,27 +30,29 @@ function Recombination:pull()
 
         if i1_pkts then
             local p = link.front(input1)
-            local seq_num, _, _ = self:read_header(p)
+            local seq_num, eth_type = ha.read_hybrid_access_header(p)
             last_pkt_num_i1 = seq_num
+            last_eth_type_i1 = eth_type
             if seq_num == self.next_pkt_num then
-                self:process_packet(input1, output, seq_num)
+                self:process_packet(input1, output, seq_num, eth_type)
                 found_next = true
             end
         end
         if not found_next and i2_pkts then
             local p = link.front(input2)
-            local seq_num, _, _ = self:read_header(p)
+            local seq_num, eth_type = ha.read_hybrid_access_header(p)
             last_pkt_num_i2 = seq_num
+            last_eth_type_i2 = eth_type
             if seq_num == self.next_pkt_num then
-                self:process_packet(input2, output, seq_num)
+                self:process_packet(input2, output, seq_num, eth_type)
                 found_next = true
             end
         end
         if not found_next and i1_pkts and i2_pkts then
             if last_pkt_num_i1 < last_pkt_num_i2 then
-                self:process_packet(input1, output, last_pkt_num_i1)
+                self:process_packet(input1, output, last_pkt_num_i1, last_eth_type_i1)
             else
-                self:process_packet(input2, output, last_pkt_num_i2)
+                self:process_packet(input2, output, last_pkt_num_i2, last_eth_type_i2)
             end
             found_next = true
         end
@@ -67,35 +65,9 @@ function Recombination:pull()
     end
 end
 
-function Recombination:process_packet(input, output, pkt_num)
+function Recombination:process_packet(input, output, pkt_num, eth_type)
     local p = link.receive(input)
-    --print(p.data[0], p.data[1], p.data[2], p.data[3], p.data[4], p.data[5], p.data[6], p.data[7])
-    p = packet.shiftleft(p, HEADER_SIZE)
+    p = ha.remove_hybrid_access_header(p, eth_type)
     link.transmit(output, p)
     self.next_pkt_num = pkt_num + 1
-end
-
----comment
----@param p any (packet)
----@return integer
----@return integer
----@return integer
-function Recombination:read_header(p)
-    if p.length < HEADER_SIZE then
-        error("packet does not contain a header")
-    end
-
-    local header = p.data
-    local sequence_number = lshift(header[0], 24);
-    sequence_number = bor(sequence_number, lshift(header[1], 16));
-    sequence_number = bor(sequence_number, lshift(header[2], 8));
-    sequence_number = bor(sequence_number, header[3]);
-
-    local length = lshift(header[4], 16)
-    length = bor(length, lshift(header[5], 8))
-    length = bor(length, header[6])
-
-    local type = header[7]
-
-    return sequence_number, length, type
 end
