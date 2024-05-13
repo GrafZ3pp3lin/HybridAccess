@@ -28,7 +28,7 @@ function run()
     local c = config.new()
     config.app(c, "in1", raw.RawSocket, cfg.link_in_1)
     config.app(c, "in2", raw.RawSocket, cfg.link_in_2)
-    config.app(c, "recombination", recombination.Recombination)
+    config.app(c, "recombination", recombination.Recombination, cfg.recombination.config)
     config.app(c, "target", basics.Sink)
 
     config.link(c, "in1.tx -> recombination.input1")

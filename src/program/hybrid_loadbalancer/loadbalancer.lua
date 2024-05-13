@@ -13,7 +13,7 @@ function LoadBalancer:new()
     setmetatable(o, self)
     self.sequence_number = 0
     self.eth = ethernet:new{
-        type = 0x9444 -- HybridAccess
+        type = ha.HYBRID_ACCESS_TYPE
     }
     self.__index = self
     return o

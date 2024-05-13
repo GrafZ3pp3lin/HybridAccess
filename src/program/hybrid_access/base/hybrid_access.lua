@@ -23,8 +23,10 @@ local ETH_SIZE = ETH_SIZE
 
 local uint16_ptr_t = ffi.typeof("uint16_t*")
 
+HYBRID_ACCESS_TYPE = 0x9444
+
 function get_eth_type(pkt)
-    return cast(uint16_ptr_t, pkt.data + ETH_SIZE - 2)[0]
+    return ntohs(cast(uint16_ptr_t, pkt.data + ETH_SIZE - 2)[0])
 end
 
 function add_hybrid_access_header(pkt, eth_header, sequence_number, eth_type)
