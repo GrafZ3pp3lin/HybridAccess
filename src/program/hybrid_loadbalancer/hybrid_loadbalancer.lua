@@ -4,12 +4,13 @@ module(..., package.seeall)
 
 local raw = require("apps.socket.raw")
 local ini = require("program.hybrid_access.base.ini")
-local basics = require("apps.basic.basic_apps")
+--local basics = require("apps.basic.basic_apps")
 -- local rate_limiter = require("apps.rate_limiter.rate_limiter")
--- local source = require("program.hybrid_access.base.ordered_source")
+local source = require("program.hybrid_access.base.ordered_source")
 local roundrobin = require("program.hybrid_loadbalancer.roundrobin")
 local w_roundrobin = require("program.hybrid_loadbalancer.weighted_roundrobin")
 local tokenbucket = require("program.hybrid_loadbalancer.tokenbucket")
+local tokenbucket_ddc = require("program.hybrid_loadbalancer.tokenbucket_ddc")
 
 local function dump(o)
     if type(o) == 'table' then
@@ -29,7 +30,7 @@ function run()
     print(dump(cfg))
 
     local c = config.new()
-    config.app(c, "source", basics.Source)
+    config.app(c, "source", source.OrderedSource)
     config.app(c, "out1", raw.RawSocket, cfg.link_out_1)
     config.app(c, "out2", raw.RawSocket, cfg.link_out_2)
     --config.app(c, "rate_limiter1", rate_limiter.RateLimiter, { rate=, })
@@ -40,6 +41,8 @@ function run()
         config.app(c, "loadbalancer", w_roundrobin.WeightedRoundRobin, cfg.loadbalancer.config)
     elseif cfg.loadbalancer.type == "TokenBucket" then
         config.app(c, "loadbalancer", tokenbucket.TokenBucket, cfg.loadbalancer.config)
+    elseif cfg.loadbalancer.type == "TokenBucketDDC" then
+        config.app(c, "loadbalancer", tokenbucket_ddc.TokenBucketDDC, cfg.loadbalancer.config)
     end
 
     config.link(c, "source.output -> loadbalancer.input")

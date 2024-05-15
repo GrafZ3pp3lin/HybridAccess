@@ -3,9 +3,9 @@
 module(..., package.seeall)
 
 local raw = require("apps.socket.raw")
-local basics = require("apps.basic.basic_apps")
+--local basics = require("apps.basic.basic_apps")
 local ini = require("program.hybrid_access.base.ini")
--- local target = require("program.hybrid_access.base.ordered_sink")
+local target = require("program.hybrid_access.base.ordered_sink")
 local recombination = require("program.hybrid_recombinator.recombination")
 
 local function dump(o)
@@ -29,7 +29,7 @@ function run()
     config.app(c, "in1", raw.RawSocket, cfg.link_in_1)
     config.app(c, "in2", raw.RawSocket, cfg.link_in_2)
     config.app(c, "recombination", recombination.Recombination, cfg.recombination.config)
-    config.app(c, "target", basics.Sink)
+    config.app(c, "target", target.OrderedSink)
 
     config.link(c, "in1.tx -> recombination.input1")
     config.link(c, "in2.tx -> recombination.input2")

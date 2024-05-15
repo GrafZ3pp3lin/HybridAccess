@@ -6,13 +6,13 @@ local link = require("core.link")
 local loadbalancer = require("program.hybrid_loadbalancer.loadbalancer")
 local min = math.min
 
-TokenBucket = loadbalancer.LoadBalancer:new()
-TokenBucket.config = {
+TokenBucketDDC = loadbalancer.LoadBalancer:new()
+TokenBucketDDC.config = {
     rate     = {required=true},
     capacity = {required=true}
 }
 
-function TokenBucket:new(conf)
+function TokenBucketDDC:new(conf)
     local o = {
         rate = conf.rate,
         capacity = conf.capacity,
@@ -23,7 +23,7 @@ function TokenBucket:new(conf)
     return o
 end
 
-function TokenBucket:push()
+function TokenBucketDDC:push()
     local i = assert(self.input.input, "input port not found")
     local o1 = assert(self.output.output1, "output port 1 not found")
     local o2 = assert(self.output.output2, "output port 2 not found")
@@ -43,20 +43,20 @@ function TokenBucket:push()
     end
 end
 
-function TokenBucket:process_packet(i, o1, o2)
+function TokenBucketDDC:process_packet(i, o1, o2)
     local p = link.receive(i)
     local length = p.length
 
     if length <= self.contingent then
         self.contingent = self.contingent - length
-        self:send_pkt(p, o1)
+        self:send_pkt_with_ddc(p, o1, o2)
 
     else
-        self:send_pkt(p, o2)
+        self:send_pkt_with_ddc(p, o2, o1)
     end
 end
 
-function TokenBucket:report ()
+function TokenBucketDDC:report ()
     local out1_stats = link.stats(self.output.output1)
     local out2_stats = link.stats(self.output.output2)
 

@@ -15,25 +15,33 @@ local hybrid_access_header_t = ffi.typeof([[
       uint16_t type;
    } __attribute__((packed))
 ]])
-local hybrid_access_header_ptr_t = ffi.typeof("$ *", hybrid_access_header_t)
+local hybrid_access_header_ptr_t = ffi.typeof("$*", hybrid_access_header_t)
 
 ETH_SIZE = ethernet:sizeof()
-local HYBRID_ACCESS_SIZE = ffi.sizeof(hybrid_access_header_t)
 local ETH_SIZE = ETH_SIZE
+local HYBRID_ACCESS_SIZE = ffi.sizeof(hybrid_access_header_t)
 
 local uint16_ptr_t = ffi.typeof("uint16_t*")
 
 HYBRID_ACCESS_TYPE = 0x9444
+HYBRID_ACCESS_DDC_TYPE = 0x9445
+
+local hybrid_header = ethernet:new{
+    type = HYBRID_ACCESS_TYPE
+}
+local hybrid_ddc_header = ethernet:new{
+    type = HYBRID_ACCESS_DDC_TYPE
+}
 
 function get_eth_type(pkt)
     return ntohs(cast(uint16_ptr_t, pkt.data + ETH_SIZE - 2)[0])
 end
 
-function add_hybrid_access_header(pkt, eth_header, sequence_number, eth_type)
+function add_hybrid_access_header(pkt, sequence_number, eth_type)
     -- make new packet with room for hybrid access header
     local p_new = packet.shiftright(pkt, HYBRID_ACCESS_SIZE)
     -- Slap on new ethernet header
-    copy(p_new.data, eth_header:header(), ETH_SIZE)
+    copy(p_new.data, hybrid_header:header(), ETH_SIZE)
     -- cast packet to hybrid access header (at correct index pointer)
     local ha_header = cast(hybrid_access_header_ptr_t, p_new.data + ETH_SIZE)
     ha_header.seq_no = htonl(sequence_number)
@@ -61,4 +69,17 @@ function read_hybrid_access_header(pkt)
     local seq_no = ntohl(ha_header.seq_no)
     local type = ntohs(ha_header.type)
     return seq_no, type
+end
+
+function make_ddc_packet(sequence_number)
+    local pkt = packet.allocate()
+    pkt.length = ETH_SIZE + HYBRID_ACCESS_SIZE
+
+    copy(pkt.data, hybrid_ddc_header:header(), ETH_SIZE)
+
+    local ha_header = cast(hybrid_access_header_ptr_t, pkt.data + ETH_SIZE)
+    ha_header.seq_no = htonl(sequence_number)
+    ha_header.type = 0xFFFF
+
+    return pkt
 end

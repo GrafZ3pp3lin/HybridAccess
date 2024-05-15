@@ -1,6 +1,6 @@
 module(..., package.seeall)
 
-local bit = require("bit")
+local ffi = require("ffi")
 local lib = require("core.lib")
 local link = require("core.link")
 local packet = require("core.packet")
@@ -20,10 +20,8 @@ function OrderedSink:pull ()
     local input = self.input.input
     for _ = 1, link.nreadable(input) do
         local p = link.receive(input)
-        local seq_num = p.data[p.length - 1]
-        seq_num = bit.bor(seq_num, bit.lshift(p.data[p.length - 2], 8))
-        seq_num = bit.bor(seq_num, bit.lshift(p.data[p.length - 3], 16))
-        seq_num = bit.bor(seq_num, bit.lshift(p.data[p.length - 4], 24))
+        local seq_num_ptr = ffi.cast("uint32_t*", p.data + p.length - 4)
+        local seq_num = lib.ntohl(seq_num_ptr[0])
         if seq_num > self.index then
             -- print("received packet "..seq_num.." - expected: "..self.index)
             self.index = seq_num
