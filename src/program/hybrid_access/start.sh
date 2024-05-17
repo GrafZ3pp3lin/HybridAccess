@@ -1,7 +1,7 @@
 #!/bin/bash
 
-ip netns exec net2 snabb hybrid_recombinator &
-snabb hybrid_loadbalancer
+ip netns exec net2 snabb hybrid_access "/home/student/snabb/src/program/hybrid_access/config2.ini" &
+snabb hybrid_access "/home/student/snabb/src/program/hybrid_access/config.ini"
 
 wait 
 echo "All done"

@@ -17,7 +17,8 @@ function OrderedSink:new ()
 end
 
 function OrderedSink:pull ()
-    local input = self.input.input
+    local input = assert(self.input.input, "input port not found")
+
     for _ = 1, link.nreadable(input) do
         local p = link.receive(input)
         local seq_num_ptr = ffi.cast("uint32_t*", p.data + p.length - 4)
@@ -35,7 +36,6 @@ end
 
 function OrderedSink:report ()
     local input_stats = link.stats(self.input.input)
-
     print(string.format("%20s packets received", lib.comma_value(input_stats.txpackets)))
     print(string.format("%20s bytes received", lib.comma_value(input_stats.txbytes)))
 end

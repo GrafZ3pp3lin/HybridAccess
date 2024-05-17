@@ -2,56 +2,36 @@
 
 module(..., package.seeall)
 
-local raw = require("apps.socket.raw")
-local ini = require("program.hybrid_access.base.ini")
---local basics = require("apps.basic.basic_apps")
--- local rate_limiter = require("apps.rate_limiter.rate_limiter")
-local source = require("program.hybrid_access.base.ordered_source")
-local roundrobin = require("program.hybrid_loadbalancer.roundrobin")
-local w_roundrobin = require("program.hybrid_loadbalancer.weighted_roundrobin")
-local tokenbucket = require("program.hybrid_loadbalancer.tokenbucket")
-local tokenbucket_ddc = require("program.hybrid_loadbalancer.tokenbucket_ddc")
+local lib = require("core.lib")
 
-local function dump(o)
-    if type(o) == 'table' then
-        local s = '{'
-        for k, v in pairs(o) do
-            if type(k) ~= 'number' then k = '"' .. k .. '"' end
-            s = s .. k .. '=' .. dump(v) .. ','
-        end
-        return s .. '}'
-    else
-        return tostring(o)
-    end
-end
+--local pci = require("lib.hardware.pci")
+
+local ini = require("program.hybrid_access.base.ini")
+local base = require("program.hybrid_access.base.base")
 
 function run()
     local cfg = ini.Ini:parse("/home/student/snabb/src/program/hybrid_loadbalancer/config.ini")
-    print(dump(cfg))
+    print(base.dump(cfg))
+
+    --pci.scan_devices()
+    --print(base.dump(pci.devices))
 
     local c = config.new()
-    config.app(c, "source", source.OrderedSource)
-    config.app(c, "out1", raw.RawSocket, cfg.link_out_1)
-    config.app(c, "out2", raw.RawSocket, cfg.link_out_2)
-    --config.app(c, "rate_limiter1", rate_limiter.RateLimiter, { rate=, })
-
-    if cfg.loadbalancer.type == "RoundRobin" then
-        config.app(c, "loadbalancer", roundrobin.RoundRobin)
-    elseif cfg.loadbalancer.type == "WeightedRoundRobin" then
-        config.app(c, "loadbalancer", w_roundrobin.WeightedRoundRobin, cfg.loadbalancer.config)
-    elseif cfg.loadbalancer.type == "TokenBucket" then
-        config.app(c, "loadbalancer", tokenbucket.TokenBucket, cfg.loadbalancer.config)
-    elseif cfg.loadbalancer.type == "TokenBucketDDC" then
-        config.app(c, "loadbalancer", tokenbucket_ddc.TokenBucketDDC, cfg.loadbalancer.config)
+    for _, app in ipairs(cfg.apps) do
+        if not lib.have_module(app.path) then
+            error("app %s does not exists", app.path)
+        end
+        config.app(c, app.name, require(app.path)[app.type], app.config)
     end
 
-    config.link(c, "source.output -> loadbalancer.input")
-    config.link(c, "loadbalancer.output1 -> out1.rx")
-    config.link(c, "loadbalancer.output2 -> out2.rx")
+    for _, l in ipairs(cfg.links) do
+        config.link(c, l)
+    end
 
     engine.configure(c)
     print("start loadbalancer")
     engine.busywait = true
     engine.main({ duration = cfg.duration, report = { showlinks = true, showapps = true } })
+    engine.stop()
     print("stop loadbalancer")
 end

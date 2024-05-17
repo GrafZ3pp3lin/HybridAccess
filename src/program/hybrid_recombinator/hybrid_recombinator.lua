@@ -5,25 +5,13 @@ module(..., package.seeall)
 local raw = require("apps.socket.raw")
 --local basics = require("apps.basic.basic_apps")
 local ini = require("program.hybrid_access.base.ini")
-local target = require("program.hybrid_access.base.ordered_sink")
-local recombination = require("program.hybrid_recombinator.recombination")
-
-local function dump(o)
-    if type(o) == 'table' then
-        local s = '{'
-        for k, v in pairs(o) do
-            if type(k) ~= 'number' then k = '"' .. k .. '"' end
-            s = s .. k .. '=' .. dump(v) .. ','
-        end
-        return s .. '}'
-    else
-        return tostring(o)
-    end
-end
+local base = require("program.hybrid_access.base.base")
+local target = require("program.hybrid_access.target.ordered_sink")
+local recombination = require("program.hybrid_access.recombination.recombination")
 
 function run()
     local cfg = ini.Ini:parse("/home/student/snabb/src/program/hybrid_recombinator/config.ini")
-    print(dump(cfg))
+    print(base.dump(cfg))
 
     local c = config.new()
     config.app(c, "in1", raw.RawSocket, cfg.link_in_1)
@@ -39,5 +27,6 @@ function run()
     print("start recombinator")
     engine.busywait = true
     engine.main({ duration = cfg.duration, report = { showlinks = true, showapps = true } })
+    engine.stop()
     print("stop recombinator")
 end

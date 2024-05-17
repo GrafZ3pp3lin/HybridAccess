@@ -20,8 +20,9 @@ function OrderedSource:new(size)
 end
 
 function OrderedSource:pull ()
-    local output = self.output.output
-    for i = 1, engine.pull_npackets do
+    local output = assert(self.output.output, "output port not found")
+
+    for _ = 1, engine.pull_npackets do
         local data = ffi.new("uint8_t[?]", self.size)
         local seq_num = ffi.cast("uint32_t*", data + self.size - 4)
         seq_num[0] = lib.htonl(self.index)
@@ -33,7 +34,6 @@ end
 
 function OrderedSource:report ()
     local output_stats = link.stats(self.output.output)
-
     print(string.format("%20s packets generated", lib.comma_value(output_stats.txpackets)))
     print(string.format("%20s bytes generated", lib.comma_value(output_stats.txbytes)))
 end

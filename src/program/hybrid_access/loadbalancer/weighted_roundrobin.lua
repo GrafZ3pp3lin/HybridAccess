@@ -1,7 +1,7 @@
 module(..., package.seeall)
 
 local link = require("core.link")
-local loadbalancer = require("program.hybrid_loadbalancer.loadbalancer")
+local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
 
 WeightedRoundRobin = loadbalancer.LoadBalancer:new()
 WeightedRoundRobin.config = {
@@ -10,6 +10,7 @@ WeightedRoundRobin.config = {
 }
 
 function WeightedRoundRobin:new(conf)
+    print("Use weighted RoundRobin as Loadbalancer")
     local b1 = conf.bandwidths.output1
     local b2 = conf.bandwidths.output2
     local w1, w2 = 0, 0

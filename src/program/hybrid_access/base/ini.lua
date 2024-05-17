@@ -13,12 +13,15 @@ function Ini:parse(file_name)
         if temp_section then
             currentContent = content
             for str in string.gmatch(temp_section, "[^%.]+") do
-                currentContent[str] = currentContent[str] or {}
-                currentContent = currentContent[str]
+                local index = tonumber(str) or str
+                currentContent[index] = currentContent[index] or {}
+                currentContent = currentContent[index]
             end
         else
             local key, value = line:match('^([%w_]+)%s*=%s*(.+)$');
             if key and value ~= nil then
+                key = tonumber(key) or key
+
                 local value_number = tonumber(value)
                 if value_number then
                     value = value_number

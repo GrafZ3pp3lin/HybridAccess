@@ -3,7 +3,7 @@ module(..., package.seeall)
 local engine = require("core.app")
 local lib = require("core.lib")
 local link = require("core.link")
-local loadbalancer = require("program.hybrid_loadbalancer.loadbalancer")
+local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
 local min = math.min
 
 TokenBucketDDC = loadbalancer.LoadBalancer:new()
@@ -13,6 +13,7 @@ TokenBucketDDC.config = {
 }
 
 function TokenBucketDDC:new(conf)
+    print("Use TokenBucket with delay difference compensation as Loadbalancer")
     local o = {
         rate = conf.rate,
         capacity = conf.capacity,

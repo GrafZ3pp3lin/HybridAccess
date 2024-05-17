@@ -1,11 +1,12 @@
 module(..., package.seeall)
 
 local link = require("core.link")
-local loadbalancer = require("program.hybrid_loadbalancer.loadbalancer")
+local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
 
 RoundRobin = loadbalancer.LoadBalancer:new()
 
 function RoundRobin:new()
+    print("Use RoundRobin as Loadbalancer")
     local o = {
         flip = false
     }

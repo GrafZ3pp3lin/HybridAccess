@@ -15,6 +15,10 @@ function LoadBalancer:new()
     return o
 end
 
+function LoadBalancer:stop()
+    print("Stop Loadbalancer")
+end
+
 function LoadBalancer:build_packet(p, sequence_number)
     if p.length >= ETH_SIZE then
         -- get eth_type of packet
