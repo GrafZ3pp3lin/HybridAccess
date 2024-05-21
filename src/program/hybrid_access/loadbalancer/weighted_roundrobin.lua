@@ -10,7 +10,6 @@ WeightedRoundRobin.config = {
 }
 
 function WeightedRoundRobin:new(conf)
-    print("Use weighted RoundRobin as Loadbalancer")
     local b1 = conf.bandwidths.output1
     local b2 = conf.bandwidths.output2
     local w1, w2 = 0, 0
@@ -26,7 +25,8 @@ function WeightedRoundRobin:new(conf)
     local o = {
         index = 0,
         w1 = w1,
-        w2 = w2
+        w2 = w2,
+        class_type = "WeightedRoundRobin"
     }
     setmetatable(o, self)
     self.__index = self

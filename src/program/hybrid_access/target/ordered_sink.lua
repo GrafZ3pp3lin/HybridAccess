@@ -7,16 +7,16 @@ local packet = require("core.packet")
 
 OrderedSink = {}
 
-function OrderedSink:new ()
+function OrderedSink:new()
     local o = {
         index = 0,
     }
     setmetatable(o, self)
     self.__index = self
-   return o
+    return o
 end
 
-function OrderedSink:pull ()
+function OrderedSink:pull()
     local input = assert(self.input.input, "input port not found")
 
     for _ = 1, link.nreadable(input) do
@@ -27,15 +27,15 @@ function OrderedSink:pull ()
             -- print("received packet "..seq_num.." - expected: "..self.index)
             self.index = seq_num
         elseif seq_num < self.index then
-            error("paket out of order: "..seq_num.." - expected: "..self.index)
+            error("paket out of order: " .. seq_num .. " - expected: " .. self.index)
         end
         packet.free(p)
         self.index = self.index + 1
     end
 end
 
-function OrderedSink:report ()
+function OrderedSink:file_report(f)
     local input_stats = link.stats(self.input.input)
-    print(string.format("%20s packets received", lib.comma_value(input_stats.txpackets)))
-    print(string.format("%20s bytes received", lib.comma_value(input_stats.txbytes)))
+    f:write(string.format("%20s packets received", lib.comma_value(input_stats.txpackets)), "\n")
+    f:write(string.format("%20s bytes received", lib.comma_value(input_stats.txbytes)), "\n")
 end

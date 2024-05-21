@@ -2,14 +2,21 @@ module(..., package.seeall)
 
 local link = require("core.link")
 local engine = require("core.app")
+local lib = require("core.lib")
+local counter = require("core.counter")
 local ha = require("program.hybrid_access.base.hybrid_access")
 
 Recombination = {}
 Recombination.config = {
-    link_delays = {required=true},
+    link_delays = { required = true },
+}
+Recombination.shm = {
+    timeout_startet = { counter },
+    timeout_reached = { counter },
+    drop_seq_no = { counter },
 }
 
-function Recombination:new (conf)
+function Recombination:new(conf)
     local o = {
         next_pkt_num = 0,
         link_delays = conf.link_delays,
@@ -18,6 +25,25 @@ function Recombination:new (conf)
     setmetatable(o, self)
     self.__index = self
     return o
+end
+
+function Recombination:file_report(f)
+    local in1_stats = link.stats(self.input[1])
+    local in2_stats = link.stats(self.input[2])
+    local output_stats = link.stats(self.output.output)
+
+    f:write(
+    string.format("%20s# / %20sb in 1", lib.comma_value(in1_stats.txpackets), lib.comma_value(in1_stats.txbytes)), "\n")
+    f:write(
+    string.format("%20s# / %20sb in 2", lib.comma_value(in2_stats.txpackets), lib.comma_value(in2_stats.txbytes)), "\n")
+    f:write(
+    string.format("%20s# / %20sb out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
+        "\n")
+    f:write(string.format("%20s timeout started", lib.comma_value(counter.read(self.shm.timeout_startet))), "\n")
+    f:write(string.format("%20s timeout reached", lib.comma_value(counter.read(self.shm.timeout_reached))), "\n")
+    f:write(
+    string.format("%20s dropped packages because of too low seq num", lib.comma_value(counter.read(self.shm.drop_seq_no))),
+        "\n")
 end
 
 function Recombination:pull()
@@ -73,7 +99,7 @@ function Recombination:process_non_empty_links(output)
                 found_pkt = true
                 break
             elseif seq_num < self.next_pkt_num then
-                print("dismiss packet with lower seq num as expected", seq_num, self.next_pkt_num, i)
+                counter.add(self.shm.drop_seq_no)
                 local p_real = link.receive(self.input[i])
                 packet.free(p_real)
                 found_pkt = true
@@ -107,12 +133,13 @@ function Recombination:process_with_empty_link(input, output)
             self:process_packet(input, output, seq_num, eth_type, ha_type)
             self.wait_until = nil
         elseif seq_num < self.next_pkt_num then
-            print("dismiss packet with lower seq num as expected", seq_num, self.next_pkt_num)
+            counter.add(self.shm.drop_seq_no)
             local p_real = link.receive(input)
             packet.free(p_real)
             break
         else
             local now = engine.now()
+            counter.add(self.shm.timeout_startet)
             self.wait_until = now + self:estimate_wait_time()
             self.empty_links = self:get_empty_links()
             break
@@ -153,6 +180,7 @@ end
 function Recombination:continue_processing()
     if engine.now() >= self.wait_until then
         self.wait_until = nil
+        counter.add(self.shm.timeout_reached)
         return true, true
     else
         -- check if an empty link is no longer empty
@@ -170,7 +198,7 @@ function Recombination:estimate_wait_time()
     local index = 1
     for i, v in ipairs(self.input) do
         if link.empty(v) then
-            times[index] = self.link_delays["delay"..i]
+            times[index] = self.link_delays["delay" .. i]
             index = index + 1
         end
     end

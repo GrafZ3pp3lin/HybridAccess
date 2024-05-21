@@ -31,8 +31,8 @@ function SimpleSource:stop()
     packet.free(self.packet)
 end
 
-function SimpleSource:report ()
+function SimpleSource:file_report(f)
     local output_stats = link.stats(self.output.output)
-    print(string.format("%20s packets generated", lib.comma_value(output_stats.txpackets)))
-    print(string.format("%20s bytes generated", lib.comma_value(output_stats.txbytes)))
+    f:write(string.format("%20s packets generated", lib.comma_value(output_stats.txpackets)), "\n")
+    f:write(string.format("%20s bytes generated", lib.comma_value(output_stats.txbytes)), "\n")
 end

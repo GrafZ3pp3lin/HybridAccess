@@ -20,8 +20,8 @@ function SimpleSink:push()
     end
 end
 
-function SimpleSink:report ()
+function SimpleSink:file_report(f)
     local input_stats = link.stats(self.input.input)
-    print(string.format("%20s packets received", lib.comma_value(input_stats.txpackets)))
-    print(string.format("%20s bytes received", lib.comma_value(input_stats.txbytes)))
+    f:write(string.format("%20s packets received", lib.comma_value(input_stats.txpackets)), "\n")
+    f:write(string.format("%20s bytes received", lib.comma_value(input_stats.txbytes)), "\n")
 end

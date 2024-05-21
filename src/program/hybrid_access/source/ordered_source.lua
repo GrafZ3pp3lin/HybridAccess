@@ -19,7 +19,7 @@ function OrderedSource:new(size)
     return o
 end
 
-function OrderedSource:pull ()
+function OrderedSource:pull()
     local output = assert(self.output.output, "output port not found")
 
     for _ = 1, engine.pull_npackets do
@@ -32,8 +32,8 @@ function OrderedSource:pull ()
     end
 end
 
-function OrderedSource:report ()
+function OrderedSource:file_report(f)
     local output_stats = link.stats(self.output.output)
-    print(string.format("%20s packets generated", lib.comma_value(output_stats.txpackets)))
-    print(string.format("%20s bytes generated", lib.comma_value(output_stats.txbytes)))
+    f:write(string.format("%20s packets generated", lib.comma_value(output_stats.txpackets)), "\n")
+    f:write(string.format("%20s bytes generated", lib.comma_value(output_stats.txbytes)), "\n")
 end

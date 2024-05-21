@@ -6,9 +6,9 @@ local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
 RoundRobin = loadbalancer.LoadBalancer:new()
 
 function RoundRobin:new()
-    print("Use RoundRobin as Loadbalancer")
     local o = {
-        flip = false
+        flip = false,
+        class_type = "RoundRobin"
     }
     setmetatable(o, self)
     self.__index = self

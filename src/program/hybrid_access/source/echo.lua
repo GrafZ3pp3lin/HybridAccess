@@ -68,7 +68,7 @@ function Echo:push()
         local p = link.receive(input)
         local seq_no = read_seq_no(p)
         if seq_no ~= i + count then
-            error(self.name..": packets durcheinander: "..seq_no..", "..(i+count))
+            error(self.name .. ": packets durcheinander: " .. seq_no .. ", " .. (i + count))
         end
         self.buffer[i + count] = p
     end
@@ -82,8 +82,13 @@ function Echo:stop()
     end
 end
 
-function Echo:report()
+function Echo:file_report(f)
+    local input_stats = link.stats(self.input.input)
     local output_stats = link.stats(self.output.output)
-    print(string.format("%20s packets transfered", lib.comma_value(output_stats.txpackets)))
-    print(string.format("%20s bytes transfered", lib.comma_value(output_stats.txbytes)))
+
+    f:write(
+    string.format("%20s# / %20sb in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)), "\n")
+    f:write(
+    string.format("%20s# / %20sb out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
+        "\n")
 end

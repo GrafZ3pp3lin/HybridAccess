@@ -11,16 +11,16 @@ PacketDropper = {
         -- can be "nth", "prob"
         -- nth: every nth packet
         -- prob: probability of packet drop
-        mode = {default="nth"},
+        mode = { default = "nth" },
         -- every value'th packet will be dropped (fix or probabilistic)
-        value = {default=100}
+        value = { default = 100 }
     },
     shm = {
-        dropped = {counter},
+        dropped = { counter },
     }
 }
 
-function PacketDropper:new (conf)
+function PacketDropper:new(conf)
     assert(conf.value > 1, "value has to be larger than 1")
     local o = {
         mode = 0,
@@ -37,7 +37,7 @@ function PacketDropper:new (conf)
     end
     setmetatable(o, self)
     self.__index = self
-   return o
+    return o
 end
 
 function PacketDropper:get_next()
@@ -50,7 +50,7 @@ function PacketDropper:get_next()
     end
 end
 
-function PacketDropper:push ()
+function PacketDropper:push()
     local input = self.input.input
     local output = self.output.output
 
@@ -68,11 +68,14 @@ function PacketDropper:push ()
     end
 end
 
-function PacketDropper:report ()
+function PacketDropper:file_report(f)
     local input_stats = link.stats(self.input.input)
     local output_stats = link.stats(self.output.output)
 
-    print(string.format("%20s packets in", lib.comma_value(input_stats.txpackets)))
-    print(string.format("%20s packets out", lib.comma_value(output_stats.txpackets)))
-    print(string.format("%20s packets dropped", lib.comma_value(counter.read(self.shm.dropped))))
+    f:write(
+    string.format("%20s# / %20sb in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)), "\n")
+    f:write(
+    string.format("%20s# / %20sb out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
+        "\n")
+    f:write(string.format("%20s packets dropped", lib.comma_value(counter.read(self.shm.dropped))), "\n")
 end

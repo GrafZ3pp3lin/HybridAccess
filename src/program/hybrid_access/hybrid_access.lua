@@ -2,6 +2,7 @@
 
 module(..., package.seeall)
 
+local engine = require("core.app")
 local lib = require("core.lib")
 
 local ini = require("program.hybrid_access.base.ini")
@@ -14,7 +15,6 @@ function run(args)
     end
 
     local cfg = ini.Ini:parse(path)
-    print(base.dump(cfg))
 
     local c = config.new()
     for _, app in ipairs(cfg.apps) do
@@ -31,9 +31,10 @@ function run(args)
     engine.configure(c)
     local start = engine.now()
     engine.busywait = true
-    engine.main({ duration = cfg.duration, report = { showlinks = true, showapps = true } })
-    engine.stop()
+    engine.main({ duration = cfg.duration, no_report = true })
     local stop = engine.now()
-    print("main report:")
-    print(string.format("%20s ms", (stop - start) * 1000))
+
+    if cfg.report_file ~= nil then
+        base.report_to_file(cfg.report_file, start, stop)
+    end
 end

@@ -1,7 +1,6 @@
 module(..., package.seeall)
 
 local engine = require("core.app")
-local lib = require("core.lib")
 local link = require("core.link")
 local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
 local min = math.min
@@ -13,11 +12,11 @@ TokenBucket.config = {
 }
 
 function TokenBucket:new(conf)
-    print("Use TokenBucket as Loadbalancer")
     local o = {
         rate = conf.rate,
         capacity = conf.capacity,
         contingent = conf.capacity,
+        class_type = "TokenBucket"
     }
     setmetatable(o, self)
     self.__index = self
@@ -55,12 +54,4 @@ function TokenBucket:process_packet(i, o1, o2)
     else
         self:send_pkt(p, o2)
     end
-end
-
-function TokenBucket:report ()
-    local out1_stats = link.stats(self.output.output1)
-    local out2_stats = link.stats(self.output.output2)
-
-    print(string.format("%20s bytes send via out 1", lib.comma_value(out1_stats.txbytes)))
-    print(string.format("%20s bytes send via out 2", lib.comma_value(out2_stats.txbytes)))
 end
