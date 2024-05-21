@@ -6,7 +6,8 @@ local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
 WeightedRoundRobin = loadbalancer.LoadBalancer:new()
 WeightedRoundRobin.config = {
     -- link bandwidths
-    bandwidths = {required=true},
+    bandwidths = { required = true },
+    setup = { required = false }
 }
 
 function WeightedRoundRobin:new(conf)
@@ -30,6 +31,7 @@ function WeightedRoundRobin:new(conf)
     }
     setmetatable(o, self)
     self.__index = self
+    o:setup_headers(conf.setup)
     return o
 end
 

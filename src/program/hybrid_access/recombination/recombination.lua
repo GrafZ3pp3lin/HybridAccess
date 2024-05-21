@@ -1,5 +1,6 @@
 module(..., package.seeall)
 
+local ffi = require("ffi")
 local link = require("core.link")
 local engine = require("core.app")
 local lib = require("core.lib")
@@ -18,7 +19,7 @@ Recombination.shm = {
 
 function Recombination:new(conf)
     local o = {
-        next_pkt_num = 0,
+        next_pkt_num = ffi.new("uint64_t", 0),
         link_delays = conf.link_delays,
         wait_until = nil
     }
@@ -82,20 +83,21 @@ function Recombination:process_non_empty_links(output)
     local buf_seq_no = math.huge
     local buf_ha_type = 0
     local buf_input_index
-    local buf_eth_type = 0
+    local buf_ip_protocol = 0
+    local buf_buf_type = 0
     local found_pkt = false
 
     while not link.empty(self.input[1]) and not link.empty(self.input[2]) do
         buf_seq_no = math.huge
         found_pkt = false
         for i = 1, 2, 1 do
-            local eth_type, seq_num, ha_type = self:read_next_hybrid_access_pkt(self.input[i], output)
+            local eth_type, ip_protocol, seq_num, ha_type, buf_type = self:read_next_hybrid_access_pkt(self.input[i], output)
             if eth_type == -1 then
                 -- found no packet on that link - stop processing
                 return
             elseif seq_num == self.next_pkt_num then
                 -- found next packet
-                self:process_packet(self.input[i], output, seq_num, eth_type, ha_type)
+                self:process_packet(self.input[i], output, seq_num, buf_type, ha_type, ip_protocol)
                 found_pkt = true
                 break
             elseif seq_num < self.next_pkt_num then
@@ -109,11 +111,12 @@ function Recombination:process_non_empty_links(output)
                 buf_input_index = i
                 buf_seq_no = seq_num
                 buf_ha_type = ha_type
-                buf_eth_type = eth_type
+                buf_ip_protocol = ip_protocol
+                buf_buf_type = buf_type
             end
         end
         if not found_pkt and buf_seq_no ~= math.huge then
-            self:process_packet(self.input[buf_input_index], output, buf_seq_no, buf_eth_type, buf_ha_type)
+            self:process_packet(self.input[buf_input_index], output, buf_seq_no, buf_buf_type, buf_ha_type, buf_ip_protocol)
         end
     end
 end
@@ -124,13 +127,13 @@ end
 ---@param output link
 function Recombination:process_with_empty_link(input, output)
     while not link.empty(input) do
-        local eth_type, seq_num, ha_type = self:read_next_hybrid_access_pkt(input, output)
+        local eth_type, ip_protocol, seq_num, ha_type, buf_type = self:read_next_hybrid_access_pkt(input, output)
         if eth_type == -1 then
             -- found no packet on that link - stop processing
             break
         elseif seq_num == self.next_pkt_num then
             -- found next packet
-            self:process_packet(input, output, seq_num, eth_type, ha_type)
+            self:process_packet(input, output, seq_num, buf_type, ha_type, ip_protocol)
             self.wait_until = nil
         elseif seq_num < self.next_pkt_num then
             counter.add(self.shm.drop_seq_no)
@@ -154,22 +157,24 @@ function Recombination:process_waited(output)
     local buf_seq_no = math.huge
     local buf_ha_type = 0
     local buf_input_index
-    local buf_eth_type = 0
+    local buf_ip_protocol = 0
+    local buf_buf_type = 0
 
     for i = 1, 2, 1 do
         if not link.empty(self.input[i]) then
-            local eth_type, seq_num, ha_type = self:read_next_hybrid_access_pkt(self.input[i], output)
+            local eth_type, ip_protocol, seq_num, ha_type, buf_type = self:read_next_hybrid_access_pkt(self.input[i], output)
             if eth_type ~= -1 and seq_num < buf_seq_no then
                 buf_input_index = i
                 buf_seq_no = seq_num
                 buf_ha_type = ha_type
-                buf_eth_type = eth_type
+                buf_ip_protocol = ip_protocol
+                buf_buf_type = buf_type
             end
         end
     end
     if buf_seq_no ~= math.huge then
         -- print("waited for ", buf_seq_no, self.next_pkt_num, buf_input_index)
-        self:process_packet(self.input[buf_input_index], output, buf_seq_no, buf_eth_type, buf_ha_type)
+        self:process_packet(self.input[buf_input_index], output, buf_seq_no, buf_buf_type, buf_ha_type, buf_ip_protocol)
     end
 end
 
@@ -228,34 +233,37 @@ end
 ---@param input link
 ---@param output link
 ---@return integer eth_type ethernet type (-1 if no packet found)
+---@return integer ip_protocol ip protocol (-1 if no packet found)
 ---@return integer seq_num sequence number (-1 if no packet found)
 ---@return integer ha_type hybrid access type (-1 if no packet found)
+---@return integer buf_type buffered type (-1 if no packet found)
 function Recombination:read_next_hybrid_access_pkt(input, output)
     local p = link.front(input)
-    local eth_type = ha.get_eth_type(p)
-    while eth_type ~= ha.HYBRID_ACCESS_TYPE and eth_type ~= ha.HYBRID_ACCESS_DDC_TYPE do
+    local eth_type, ip_protocol = ha.get_types(p)
+    while eth_type ~= ha.HYBRID_ACCESS_ETH_TYPE and ip_protocol ~= ha.HYBRID_ACCESS_IP_TYPE do
         -- just forward non hybrid packets
         local p_real = link.receive(input)
         link.transmit(output, p_real)
         p = link.front(input)
         if p == nil then
-            return -1, -1, -1
+            return -1, -1, -1, -1, -1
         end
-        eth_type = ha.get_eth_type(p)
+        eth_type, ip_protocol = ha.get_types(p)
     end
-    return eth_type, ha.read_hybrid_access_header(p)
+    return eth_type, ip_protocol, ha.read_hybrid_access_header(p, eth_type, ip_protocol)
 end
 
 ---process the next packet from link input
 ---@param input link input link
 ---@param output link output link
 ---@param seq_no integer sequence number
----@param eth_type integer ethernet type
+---@param buf_type integer buffered ethernet type for new header
 ---@param ha_type integer hybrid access type
-function Recombination:process_packet(input, output, seq_no, eth_type, ha_type)
+---@param ip_protocol integer ip protocol type
+function Recombination:process_packet(input, output, seq_no, buf_type, ha_type, ip_protocol)
     local p = link.receive(input)
-    if eth_type == ha.HYBRID_ACCESS_TYPE then
-        p = ha.remove_hybrid_access_header(p, ha_type)
+    if ha_type == ha.HYBRID_ACCESS_TYPE then
+        p = ha.remove_hybrid_access_header(p, buf_type, ip_protocol)
         link.transmit(output, p)
     else
         packet.free(p)

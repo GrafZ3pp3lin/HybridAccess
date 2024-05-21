@@ -7,8 +7,9 @@ local min = math.min
 
 TokenBucketDDC = loadbalancer.LoadBalancer:new()
 TokenBucketDDC.config = {
-    rate     = {required=true},
-    capacity = {required=true}
+    rate     = { required = true },
+    capacity = { required = true },
+    setup    = { required = false }
 }
 
 function TokenBucketDDC:new(conf)
@@ -20,6 +21,7 @@ function TokenBucketDDC:new(conf)
     }
     setmetatable(o, self)
     self.__index = self
+    o:setup_headers(conf.setup)
     return o
 end
 
@@ -50,7 +52,6 @@ function TokenBucketDDC:process_packet(i, o1, o2)
     if length <= self.contingent then
         self.contingent = self.contingent - length
         self:send_pkt_with_ddc(p, o1, o2)
-
     else
         self:send_pkt_with_ddc(p, o2, o1)
     end

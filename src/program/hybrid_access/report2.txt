@@ -1,17 +1,17 @@
 main report:
-     2000.8653369732 ms
+     2000.0096652657 ms
 recombination report:
-             169,240# /           11,169,840b in 1
-              34,160# /            2,254,560b in 2
-             203,400# /           12,204,000b out
-              10,871 timeout started
+             271,804# /           19,569,888b in 1
+              55,346# /            3,984,912b in 2
+             327,150# /           19,629,000b out
+              17,426 timeout started
                    0 timeout reached
                    0 dropped packages because of too low seq num
 loadbalancer report:
 Loadbalancer type: RoundRobin
-             203,400# /           12,204,000b in
-             101,700# /            6,712,200b out 1
-             101,700# /            6,712,200b out 2
+             327,150# /           19,629,000b in
+             163,575# /           11,777,400b out 1
+             163,575# /           11,777,400b out 2
 source report:
-             203,400# /           12,204,000b in
-             203,400# /           12,204,000b out
+             327,150# /           19,629,000b in
+             327,150# /           19,629,000b out

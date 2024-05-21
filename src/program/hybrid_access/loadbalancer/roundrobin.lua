@@ -4,14 +4,18 @@ local link = require("core.link")
 local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
 
 RoundRobin = loadbalancer.LoadBalancer:new()
+RoundRobin.config = {
+    setup = { required = false }
+}
 
-function RoundRobin:new()
+function RoundRobin:new(conf)
     local o = {
         flip = false,
         class_type = "RoundRobin"
     }
     setmetatable(o, self)
     self.__index = self
+    o:setup_headers(conf.setup)
     return o
 end
 

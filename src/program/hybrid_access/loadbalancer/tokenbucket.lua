@@ -7,8 +7,9 @@ local min = math.min
 
 TokenBucket = loadbalancer.LoadBalancer:new()
 TokenBucket.config = {
-    rate     = {required=true},
-    capacity = {required=true}
+    rate     = { required = true },
+    capacity = { required = true },
+    setup    = { required = false }
 }
 
 function TokenBucket:new(conf)
@@ -20,6 +21,7 @@ function TokenBucket:new(conf)
     }
     setmetatable(o, self)
     self.__index = self
+    o:setup_headers(conf.setup)
     return o
 end
 
@@ -50,7 +52,6 @@ function TokenBucket:process_packet(i, o1, o2)
     if length <= self.contingent then
         self.contingent = self.contingent - length
         self:send_pkt(p, o1)
-
     else
         self:send_pkt(p, o2)
     end
