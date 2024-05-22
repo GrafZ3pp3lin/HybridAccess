@@ -21,7 +21,7 @@ function TokenBucket:new(conf)
     }
     setmetatable(o, self)
     self.__index = self
-    o:setup_headers(conf.setup)
+    o:setup(conf.setup)
     return o
 end
 

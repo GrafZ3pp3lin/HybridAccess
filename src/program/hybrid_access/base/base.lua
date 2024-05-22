@@ -15,6 +15,14 @@ function dump(o)
     end
 end
 
+function data_to_str(d, len)
+    local text = ""
+    for i = 0, len - 1, 1 do
+        text = string.format("%s %x", text, d[i])
+    end
+    return text
+end
+
 function report_to_file(file_path, start, stop)
     local f = io.open(file_path, "w")
     if f ~= nil then
