@@ -1,17 +1,17 @@
 main report:
-      2000.067119021 ms
+     2000.0836099498 ms
 recombination report:
-             238,375# /           17,163,000b in 1
-             238,375# /           17,163,000b in 2
-             476,750# /           28,605,000b out
-              32,076 timeout started
+             232,450# /           16,736,400b in 1
+             232,450# /           16,736,400b in 2
+             464,900# /           27,894,000b out
+              24,166 timeout started
                    0 timeout reached
                    0 dropped packages because of too low seq num
 loadbalancer report:
 Loadbalancer type: TokenBucket
-             476,800# /           28,608,000b in
-             313,556# /           22,576,032b out 1
-             163,244# /           11,753,568b out 2
+             464,950# /           27,897,000b in
+             315,030# /           22,682,160b out 1
+             149,920# /           10,794,240b out 2
 source report:
-             476,750# /           28,605,000b in
-             476,800# /           28,608,000b out
+             464,900# /           27,894,000b in
+             464,950# /           27,897,000b out
