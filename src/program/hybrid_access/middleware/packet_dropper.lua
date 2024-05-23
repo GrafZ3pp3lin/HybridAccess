@@ -51,8 +51,8 @@ function PacketDropper:get_next()
 end
 
 function PacketDropper:push()
-    local input = self.input.input
-    local output = self.output.output
+    local input = assert(self.input.input, "input port not found")
+    local output = assert(self.output.output, "output port not found")
 
     for _ = 1, link.nreadable(input) do
         local p = link.receive(input)
@@ -73,9 +73,10 @@ function PacketDropper:file_report(f)
     local output_stats = link.stats(self.output.output)
 
     f:write(
-    string.format("%20s# / %20sb in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)), "\n")
+        string.format("%20s# / %20sb in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)),
+        "\n")
     f:write(
-    string.format("%20s# / %20sb out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
+        string.format("%20s# / %20sb out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
         "\n")
     f:write(string.format("%20s packets dropped", lib.comma_value(counter.read(self.shm.dropped))), "\n")
 end

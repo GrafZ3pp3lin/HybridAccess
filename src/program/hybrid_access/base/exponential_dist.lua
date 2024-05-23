@@ -2,7 +2,7 @@ module(..., package.seeall)
 
 Exponential = {}
 
-function Exponential:new (a)
+function Exponential:new(a)
     assert(a > 0, "a has to be larger than 0")
     local o = {
         lamda = 1 / a,
@@ -12,7 +12,7 @@ function Exponential:new (a)
     return o
 end
 
-function Exponential:next ()
+function Exponential:next()
     local u = math.random()
     while u == 0 do
         u = math.random()

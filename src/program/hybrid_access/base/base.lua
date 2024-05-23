@@ -31,7 +31,7 @@ function report_to_file(file_path, start, stop)
 
         for name, app in pairs(engine.app_table) do
             if app.file_report then
-                f:write(name.." report:\n")
+                f:write(name .. " report:\n")
                 app:file_report(f)
             end
         end

@@ -60,5 +60,5 @@ HYBRID_ACCESS_TYPE = 0x01
 HYBRID_ACCESS_DDC_TYPE = 0x02
 
 function GET_ETHER_TYPE(pkt)
-    return ntohs(cast(UINT16_PTR_T, pkt.data + ETHER_HEADER_LEN - 2)[0])
+   return ntohs(cast(UINT16_PTR_T, pkt.data + ETHER_HEADER_LEN - 2)[0])
 end

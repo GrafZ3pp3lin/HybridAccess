@@ -8,6 +8,8 @@ local counter = require("core.counter")
 
 local co = require("program.hybrid_access.base.constants")
 
+local C = ffi.C
+
 local HYBRID_ACCESS_TYPE = co.HYBRID_ACCESS_TYPE
 
 Recombination = {}
@@ -19,12 +21,14 @@ Recombination.shm = {
     timeout_startet = { counter },
     timeout_reached = { counter },
     drop_seq_no = { counter },
+    time_waited = { counter },
 }
 
 function Recombination:new(conf)
     local o = {
         next_pkt_num = ffi.new("uint64_t", 0),
         link_delays = conf.link_delays,
+        last_waited = ffi.new("uint64_t", 0),
         wait_until = nil
     }
     if conf.mode == "IP" then
@@ -45,17 +49,21 @@ function Recombination:file_report(f)
     local output_stats = link.stats(self.output.output)
 
     f:write(
-    string.format("%20s# / %20sb in 1", lib.comma_value(in1_stats.txpackets), lib.comma_value(in1_stats.txbytes)), "\n")
+        string.format("%20s# / %20sb in 1", lib.comma_value(in1_stats.txpackets), lib.comma_value(in1_stats.txbytes)),
+        "\n")
     f:write(
-    string.format("%20s# / %20sb in 2", lib.comma_value(in2_stats.txpackets), lib.comma_value(in2_stats.txbytes)), "\n")
+        string.format("%20s# / %20sb in 2", lib.comma_value(in2_stats.txpackets), lib.comma_value(in2_stats.txbytes)),
+        "\n")
     f:write(
-    string.format("%20s# / %20sb out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
+        string.format("%20s# / %20sb out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
         "\n")
     f:write(string.format("%20s timeout started", lib.comma_value(counter.read(self.shm.timeout_startet))), "\n")
     f:write(string.format("%20s timeout reached", lib.comma_value(counter.read(self.shm.timeout_reached))), "\n")
     f:write(
-    string.format("%20s dropped packages because of too low seq num", lib.comma_value(counter.read(self.shm.drop_seq_no))),
+        string.format("%20s dropped packages because of too low seq num",
+            lib.comma_value(counter.read(self.shm.drop_seq_no))),
         "\n")
+    f:write(string.format("%20sns waited", lib.comma_value(counter.read(self.shm.time_waited))), "\n")
 end
 
 function Recombination:pull()
@@ -66,13 +74,17 @@ function Recombination:pull()
     end
 
     if not process then
+        if self.last_waited > 0 then
+            local now = C.get_time_ns()
+            counter.add(self.shm.time_waited, now - self.last_waited)
+            self.last_waited = now
+        end
         return
     end
 
     local output = assert(self.output.output, "output port not found")
 
     if waited then
-        self.wait_until = nil
         self:process_waited(output)
     end
 
@@ -100,6 +112,7 @@ function Recombination:process_links(output)
             elseif ha_header.seq_no == self.next_pkt_num then
                 -- found next packet
                 self:process_packet(self.input[i], output, ha_header)
+                self.wait_until = nil
                 break
             elseif ha_header.seq_no < self.next_pkt_num then
                 counter.add(self.shm.drop_seq_no)
@@ -113,14 +126,16 @@ function Recombination:process_links(output)
             end
         end
         if buffered_header ~= nil then
-            if empty_link then
+            if not empty_link then
+                self:process_packet(self.input[buffered_input_index], output, buffered_header)
+                self.wait_until = nil
+            elseif self.wait_until == nil then
                 local now = engine.now()
                 counter.add(self.shm.timeout_startet)
+                self.last_waited = 0
                 self.wait_until = now + self:estimate_wait_time()
                 self.empty_links = self:get_empty_links()
                 break
-            else
-                self:process_packet(self.input[buffered_input_index], output, buffered_header)
             end
         end
     end

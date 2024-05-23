@@ -14,8 +14,8 @@ local function build_packet(seq_no)
     return p
 end
 
-local function init_buffer(buffer)
-    for i = 1, 50, 1 do
+local function init_buffer(buffer, amount)
+    for i = 1, amount, 1 do
         buffer[i] = build_packet(i)
     end
 end
@@ -30,12 +30,14 @@ end
 Echo = {}
 
 function Echo:new(cfg)
+    local amount = cfg.amount or 100
     local o = {
         buffer = {},
-        name = cfg.name
+        name = cfg.name,
+        amount = amount
     }
     if cfg.init then
-        init_buffer(o.buffer)
+        init_buffer(o.buffer, amount)
     end
     setmetatable(o, self)
     self.__index = self
@@ -44,7 +46,7 @@ end
 
 function Echo:pull()
     local count = #self.buffer
-    if count ~= 50 then
+    if count ~= self.amount then
         return
     end
 
@@ -87,8 +89,9 @@ function Echo:file_report(f)
     local output_stats = link.stats(self.output.output)
 
     f:write(
-    string.format("%20s# / %20sb in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)), "\n")
+        string.format("%20s# / %20sb in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)),
+        "\n")
     f:write(
-    string.format("%20s# / %20sb out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
+        string.format("%20s# / %20sb out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
         "\n")
 end

@@ -4,7 +4,7 @@ Ini = {}
 
 function Ini:parse(file_name)
     assert(type(file_name) == 'string', 'Parameter "file_name" must be a string.');
-	local file = assert(io.open(file_name, 'r'), 'Error loading file : ' .. file_name);
+    local file = assert(io.open(file_name, 'r'), 'Error loading file : ' .. file_name);
 
     local content = {}
     local currentContent = content
