@@ -18,6 +18,8 @@ local link_buffer = ffi.typeof([[
     } __attribute__((packed))
 ]])
 
+local MAX_LINK_SPACE = link.max
+
 Delayer = {
     config = {
         -- delay in seconds
@@ -67,10 +69,12 @@ function Delayer:push()
 
     local output = assert(self.output.output, "output port not found")
     local now = engine.now()
+    local capacity = MAX_LINK_SPACE
 
-    while self.queue:size() > 0 do
+    while self.queue:size() > 0 and capacity > 0 do
         local buffer = self.queue:look()
-        if now >= buffer.release_time then
+        if now >= buffer.release_time and buffer.length <= capacity then
+            capacity = capacity - buffer.length
             self:send_buffer(buffer, output)
             local _ = self.queue:pop()
         else
@@ -95,10 +99,10 @@ function Delayer:file_report(f)
         "\n"
     )
     f:write(
-        string.format("%20s# / %20sb in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)),
+        string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)),
         "\n")
     f:write(
-        string.format("%20s# / %20sb out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
+        string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
         "\n")
     f:write(
         string.format("%20s max buffered breaths", lib.comma_value(self.max_buffered)),

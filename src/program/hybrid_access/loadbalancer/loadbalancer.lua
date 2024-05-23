@@ -70,12 +70,12 @@ function LoadBalancer:file_report(f)
     end
 
     f:write(
-        string.format("%20s# / %20sb in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)),
+        string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)),
         "\n")
     f:write(
-        string.format("%20s# / %20sb out 1", lib.comma_value(out1_stats.txpackets), lib.comma_value(out1_stats.txbytes)),
+        string.format("%20s # / %20s b out 1", lib.comma_value(out1_stats.txpackets), lib.comma_value(out1_stats.txbytes)),
         "\n")
     f:write(
-        string.format("%20s# / %20sb out 2", lib.comma_value(out2_stats.txpackets), lib.comma_value(out2_stats.txbytes)),
+        string.format("%20s # / %20s b out 2", lib.comma_value(out2_stats.txpackets), lib.comma_value(out2_stats.txbytes)),
         "\n")
 end

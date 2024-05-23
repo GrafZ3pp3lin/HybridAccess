@@ -1,23 +1,21 @@
 main report:
-     2001.2035220861 ms
+     2000.0058393925 ms
 recombination report:
-              38,250# /            2,754,000b in 1
-              38,250# /            2,754,000b in 2
-              76,500# /            4,590,000b out
-               2,169 timeout started
+             512,104 # /           36,871,488 b in 1
+             511,976 # /           36,862,272 b in 2
+           1,023,164 # /           61,389,840 b out
+              71,029 timeout started
                    0 timeout reached
-                   0 dropped packages because of too low seq num
-                   0ns waited
-loadbalancer report:
-Loadbalancer type: RoundRobin
-              76,500# /            4,590,000b in
-              38,250# /            2,754,000b out 1
-              38,250# /            2,754,000b out 2
-source report:
-              76,500# /            4,590,000b in
-              76,500# /            4,590,000b out
-delayer_link2 report:
-delayed with 0.01s
-              38,250# /            2,754,000b in
-              38,250# /            2,754,000b out
-                   1 max buffered breaths
+                 916 dropped packages because of too low seq num
+                   0 ns waited
+sink report:
+           1,023,164 # /           61,389,840 b received
+     2.0023802178912 s active
+   30,658,433.124481 B/s
+   245,267,464.99585 bit/s
+     245.26746499585 Mbit/s
+
+link report:
+             512,104 sent on link1.tx -> recombination.input1 (loss rate: 0%)
+           1,023,164 sent on recombination.output -> sink.input (loss rate: 0%)
+             511,976 sent on link2.tx -> recombination.input2 (loss rate: 0%)

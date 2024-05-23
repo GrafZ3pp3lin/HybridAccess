@@ -1,6 +1,8 @@
 module(..., package.seeall)
 
 local engine = require("core.app")
+local counter = require("core.counter")
+local lib = require("core.lib")
 
 function dump(o)
     if type(o) == 'table' then
@@ -23,6 +25,21 @@ function data_to_str(d, len)
     return text
 end
 
+local function link_loss_rate(drop, sent)
+    sent = tonumber(sent)
+    if not sent or sent == 0 then return 0 end
+    return tonumber(drop) * 100 / (tonumber(drop)+sent)
+ end
+
+local function report_links_to_file(f)
+    f:write("\nlink report:\n")
+    for name, l in pairs(engine.link_table) do
+       local txpackets = counter.read(l.stats.txpackets)
+       local txdrop = counter.read(l.stats.txdrop)
+       f:write(string.format("%20s sent on %s (loss rate: %d%%)\n", lib.comma_value(txpackets), name, link_loss_rate(txdrop, txpackets)))
+    end
+ end
+
 function report_to_file(file_path, start, stop)
     local f = io.open(file_path, "w")
     if f ~= nil then
@@ -35,6 +52,8 @@ function report_to_file(file_path, start, stop)
                 app:file_report(f)
             end
         end
+
+        report_links_to_file(f)
 
         f:close()
     end

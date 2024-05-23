@@ -49,13 +49,13 @@ function Recombination:file_report(f)
     local output_stats = link.stats(self.output.output)
 
     f:write(
-        string.format("%20s# / %20sb in 1", lib.comma_value(in1_stats.txpackets), lib.comma_value(in1_stats.txbytes)),
+        string.format("%20s # / %20s b in 1", lib.comma_value(in1_stats.txpackets), lib.comma_value(in1_stats.txbytes)),
         "\n")
     f:write(
-        string.format("%20s# / %20sb in 2", lib.comma_value(in2_stats.txpackets), lib.comma_value(in2_stats.txbytes)),
+        string.format("%20s # / %20s b in 2", lib.comma_value(in2_stats.txpackets), lib.comma_value(in2_stats.txbytes)),
         "\n")
     f:write(
-        string.format("%20s# / %20sb out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
+        string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
         "\n")
     f:write(string.format("%20s timeout started", lib.comma_value(counter.read(self.shm.timeout_startet))), "\n")
     f:write(string.format("%20s timeout reached", lib.comma_value(counter.read(self.shm.timeout_reached))), "\n")
@@ -63,7 +63,7 @@ function Recombination:file_report(f)
         string.format("%20s dropped packages because of too low seq num",
             lib.comma_value(counter.read(self.shm.drop_seq_no))),
         "\n")
-    f:write(string.format("%20sns waited", lib.comma_value(counter.read(self.shm.time_waited))), "\n")
+    f:write(string.format("%20s ns waited", lib.comma_value(counter.read(self.shm.time_waited))), "\n")
 end
 
 function Recombination:pull()

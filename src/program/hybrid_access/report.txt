@@ -1,18 +1,15 @@
 main report:
-      2000.011137221 ms
-recombination report:
-              38,250# /            2,754,000b in 1
-              38,000# /            2,736,000b in 2
-              76,000# /            4,560,000b out
-               2,208 timeout started
-                   0 timeout reached
-                   0 dropped packages because of too low seq num
-                   0ns waited
+     2000.2435548231 ms
 loadbalancer report:
 Loadbalancer type: RoundRobin
-              76,500# /            4,590,000b in
-              38,250# /            2,754,000b out 1
-              38,250# /            2,754,000b out 2
+           1,051,926 # /           63,115,560 b in
+             525,963 # /           37,869,336 b out 1
+             525,963 # /           37,869,336 b out 2
 source report:
-              76,000# /            4,560,000b in
-              76,500# /            4,590,000b out
+           1,051,926 packets generated
+          63,115,560 bytes generated
+
+link report:
+           1,051,926 sent on source.output -> loadbalancer.input (loss rate: 0%)
+             525,963 sent on loadbalancer.output1 -> link1.rx (loss rate: 0%)
+             525,963 sent on loadbalancer.output2 -> link2.rx (loss rate: 0%)
