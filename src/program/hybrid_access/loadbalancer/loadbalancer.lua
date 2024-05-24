@@ -25,7 +25,7 @@ function LoadBalancer:setup(cfg)
         self.hybrid_access = require("program.hybrid_access.base.hybrid_access_ip").HybridAccessIp:new(cfg)
     else
         print("Loadbalancer in eth mode")
-        self.hybrid_access = require("program.hybrid_access.base.hybrid_access").HybridAccess:new()
+        self.hybrid_access = require("program.hybrid_access.base.hybrid_access").HybridAccess:new(cfg)
     end
 end
 

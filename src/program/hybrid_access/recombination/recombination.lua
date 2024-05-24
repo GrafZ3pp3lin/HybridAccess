@@ -7,6 +7,7 @@ local lib = require("core.lib")
 local counter = require("core.counter")
 
 local co = require("program.hybrid_access.base.constants")
+local base = require("program.hybrid_access.base.base")
 
 local C = ffi.C
 
@@ -15,7 +16,9 @@ local HYBRID_ACCESS_TYPE = co.HYBRID_ACCESS_TYPE
 Recombination = {}
 Recombination.config = {
     link_delays = { required = true },
-    mode = { required = false }
+    mode = { required = false },
+    source_mac = { required = false },
+    destination_mac = { required = false }
 }
 Recombination.shm = {
     timeout_startet = { counter },
@@ -33,10 +36,10 @@ function Recombination:new(conf)
     }
     if conf.mode == "IP" then
         print("Recombination in ip mode")
-        self.hybrid_access = require("program.hybrid_access.base.hybrid_access_ip").HybridAccessIp:new()
+        self.hybrid_access = require("program.hybrid_access.base.hybrid_access_ip").HybridAccessIp:new(conf)
     else
         print("Recombination in eth mode")
-        self.hybrid_access = require("program.hybrid_access.base.hybrid_access").HybridAccess:new()
+        self.hybrid_access = require("program.hybrid_access.base.hybrid_access").HybridAccess:new(conf)
     end
     setmetatable(o, self)
     self.__index = self
@@ -245,6 +248,7 @@ function Recombination:process_packet(input, output, ha_header)
     local p = link.receive(input)
     self.next_pkt_num = ha_header.seq_no + 1
     if ha_header.type == HYBRID_ACCESS_TYPE then
+        print(base.data_to_str(p.data, p.length))
         p = self.hybrid_access:remove_header(p, ha_header.buf_type) -- DO NOT ACCESS ha_header after this, because memory gets overwritten here
         link.transmit(output, p)
     else

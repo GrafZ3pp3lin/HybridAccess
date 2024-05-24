@@ -4,6 +4,7 @@ module(..., package.seeall)
 local ffi = require("ffi")
 local packet = require("core.packet")
 local lib = require("core.lib")
+local ethernet = require("lib.protocol.ethernet")
 local ipv4 = require("lib.protocol.ipv4")
 
 local hybrid_access = require("program.hybrid_access.base.hybrid_access")
@@ -13,11 +14,11 @@ local cast, copy = ffi.cast, ffi.copy
 local shiftleft, shiftright, allocate = packet.shiftleft, packet.shiftright, packet.allocate
 local htons = lib.htons
 
-local GET_ETHER_TYPE, IPV4_HEADER_PTR_T, HA_HEADER_PTR_T,
+local GET_ETHER_TYPE, ETHER_HEADER_PTR_T, IPV4_HEADER_PTR_T, HA_HEADER_PTR_T,
 ETHER_HEADER_LEN, IPV4_HEADER_LEN, HA_HEADER_LEN,
 ETHER_HEADER_T, IPV4_HEADER_T, HYBRID_ACCESS_IP_TYPE,
 HYBRID_ACCESS_TYPE, HYBRID_ACCESS_DDC_TYPE, IPV4_ETH_TYPE =
-    co.GET_ETHER_TYPE, co.IPV4_HEADER_PTR_T, co.HA_HEADER_PTR_T,
+    co.GET_ETHER_TYPE, co.ETHER_HEADER_PTR_T, co.IPV4_HEADER_PTR_T, co.HA_HEADER_PTR_T,
     co.ETHER_HEADER_LEN, co.IPV4_HEADER_LEN, co.HA_HEADER_LEN,
     co.ETHER_HEADER_T, co.IPV4_HEADER_T, co.HYBRID_ACCESS_IP_TYPE,
     co.HYBRID_ACCESS_TYPE, co.HYBRID_ACCESS_DDC_TYPE, co.IPV4_ETH_TYPE
@@ -31,9 +32,13 @@ function HybridAccessIp:new(conf)
     o.ipv4_h = IPV4_HEADER_T()
     o.ipv4_h.ttl = 64
     o.ipv4_h.protocol = HYBRID_ACCESS_IP_TYPE
-    if conf then
-        o.ipv4_h.src_ip = ipv4:pton(conf.self_ip)
-        o.ipv4_h.dst_ip = ipv4:pton(conf.target_ip)
+    if conf.destination_mac and conf.source_mac then
+        o.ether_h.ether_dhost = ethernet:pton(conf.destination_mac)
+        o.ether_h.ether_shost = ethernet:pton(conf.source_mac)
+    end
+    if conf.source_ip and conf.destination_ip then
+        o.ipv4_h.src_ip = ipv4:pton(conf.source_ip)
+        o.ipv4_h.dst_ip = ipv4:pton(conf.destination_ip)
     end
     setmetatable(o, self)
     self.__index = self
@@ -69,13 +74,7 @@ function HybridAccessIp:add_header(pkt, seq_no, buf_type)
 end
 
 function HybridAccessIp:remove_header(pkt, buf_type)
-    -- make new packet with removed hybrid access headers
-    local p_new = shiftleft(pkt, HA_HEADER_LEN + IPV4_HEADER_LEN)
-    local eth_header = ETHER_HEADER_T()
-    eth_header.ether_type = htons(buf_type)
-    -- Slap on new ethernet header
-    copy(p_new.data, eth_header, ETHER_HEADER_LEN)
-    return p_new
+    return self:_remove_header(pkt, HA_HEADER_LEN + IPV4_HEADER_LEN, buf_type)
 end
 
 function HybridAccessIp:make_ddc_packet(seq_no)
