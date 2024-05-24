@@ -21,3 +21,5 @@ __pycache__
 .images
 /lib/luajit/usr
 /src/program/programs.inc
+
+/config/report*.txt
