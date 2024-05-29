@@ -4,8 +4,6 @@ local lib = require("core.lib")
 local link = require("core.link")
 local engine = require("core.app")
 
-local base = require("program.hybrid_access.base.base")
-
 SimpleSink = {}
 
 function SimpleSink:new()
@@ -21,7 +19,6 @@ function SimpleSink:push()
     local input = assert(self.input.input, "input port not found")
     for _ = 1, link.nreadable(input) do
         local p = link.receive(input)
-        print(base.data_to_str(p.data, p.length))
         packet.free(p)
     end
 end

@@ -50,6 +50,7 @@ HA_HEADER_LEN = sizeof(HA_HEADER_T)
 --local ether_ip_ha_header_len = ffi.sizeof(ether_ip_ha_header_t)
 
 UINT16_PTR_T = ffi.typeof("uint16_t*")
+UINT8_PTR_T = ffi.typeof("uint8_t*")
 
 HYBRID_ACCESS_ETH_TYPE = 0x9444
 HYBRID_ACCESS_IP_TYPE = 0x94

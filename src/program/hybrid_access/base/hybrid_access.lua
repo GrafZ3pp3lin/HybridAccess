@@ -4,7 +4,6 @@ module(..., package.seeall)
 local ffi = require("ffi")
 local packet = require("core.packet")
 local lib = require("core.lib")
-local ethernet = require("lib.protocol.ethernet")
 
 local co = require("program.hybrid_access.base.constants")
 
@@ -23,14 +22,11 @@ HYBRID_ACCESS_TYPE, HYBRID_ACCESS_DDC_TYPE, HYBRID_ACCESS_ETH_TYPE =
 
 HybridAccess = {}
 
-function HybridAccess:new(conf)
+function HybridAccess:new()
     local o = {}
-    o.ether_h = ETHER_HEADER_T()
-    o.ether_h.ether_type = htons(HYBRID_ACCESS_ETH_TYPE)
-    if conf.destination_mac and conf.source_mac then
-        o.ether_h.ether_dhost = ethernet:pton(conf.destination_mac)
-        o.ether_h.ether_shost = ethernet:pton(conf.source_mac)
-    end
+    o.eth_buf_add = ETHER_HEADER_T()
+    o.eth_buf_remove = ETHER_HEADER_T()
+    o.ether_type_ha = htons(HYBRID_ACCESS_ETH_TYPE)
     setmetatable(o, self)
     self.__index = self
     return o
@@ -44,28 +40,44 @@ function HybridAccess:get_header(pkt)
     return nil
 end
 
-function HybridAccess:add_header(pkt, seq_no, buf_type)
+function HybridAccess:_move_eth_header(pkt, shift_length)
+    -- buffer current header
+    local old_eth_header = cast(ETHER_HEADER_PTR_T, pkt.data)
+    copy(self.eth_buf_add, old_eth_header, ETHER_HEADER_LEN)
     -- make new packet with room for new ha header
-    local p_new = shiftright(pkt, HA_HEADER_LEN)
-    -- Slap on new ethernet header
-    copy(p_new.data, self.ether_h, ETHER_HEADER_LEN)
+    local p_new = shiftright(pkt, shift_length)
+    -- Move old eth header to front with new type
+    self.eth_buf_add.ether_type = self.ether_type_ha
+    copy(p_new.data, self.eth_buf_add, ETHER_HEADER_LEN)
+    return p_new
+end
+
+function HybridAccess:_set_ha_header(pkt, offset, seq_no, buf_type, type)
     -- cast packet to hybrid access header (at correct index pointer)
-    local ha_header = cast(HA_HEADER_PTR_T, p_new.data + ETHER_HEADER_LEN)
+    local ha_header = cast(HA_HEADER_PTR_T, pkt.data + offset)
     ha_header.seq_no = seq_no
     ha_header.buf_type = buf_type
-    ha_header.type = HYBRID_ACCESS_TYPE
+    ha_header.type = type
     ha_header.unused = 0
+end
+
+function HybridAccess:add_header(pkt, seq_no, buf_type)
+    -- resize packet and move eth header to front
+    local p_new = self:_move_eth_header(pkt, HA_HEADER_LEN)
+    -- set ha header in new packet
+    self:_set_ha_header(p_new, ETHER_HEADER_LEN, seq_no, buf_type, HYBRID_ACCESS_TYPE)
     return p_new
 end
 
 function HybridAccess:_remove_header(pkt, shift_length, buf_type)
+    -- buffer current header
+    local old_eth_header = cast(ETHER_HEADER_PTR_T, pkt.data)
+    copy(self.eth_buf_remove, old_eth_header, ETHER_HEADER_LEN)
     -- make new packet with removed hybrid access headers
     local p_new = shiftleft(pkt, shift_length)
-    -- Slap on new ethernet header
-    copy(p_new.data, self.ether_h, ETHER_HEADER_LEN)
-    -- set ether_type - cast header therefore
-    local eth_header = cast(ETHER_HEADER_PTR_T, p_new.data)
-    eth_header.ether_type = htons(buf_type)
+    -- Move old eth header to front with new type
+    self.eth_buf_remove.ether_type = htons(buf_type)
+    copy(p_new.data, self.eth_buf_remove, ETHER_HEADER_LEN)
     return p_new
 end
 
@@ -73,17 +85,18 @@ function HybridAccess:remove_header(pkt, buf_type)
     return self:_remove_header(pkt, HA_HEADER_LEN, buf_type)
 end
 
-function HybridAccess:make_ddc_packet(seq_no)
+function HybridAccess:make_ddc_packet(orig_pkt, seq_no)
+    -- create new packet
     local pkt = allocate()
     pkt.length = ETHER_HEADER_LEN + HA_HEADER_LEN
-
-    copy(pkt.data, self.ether_h, ETHER_HEADER_LEN)
-
-    local ha_header = cast(HA_HEADER_PTR_T, pkt.data + ETHER_HEADER_LEN)
-    ha_header.seq_no = seq_no
-    ha_header.buf_type = 0xFFFF
-    ha_header.type = HYBRID_ACCESS_DDC_TYPE
-    ha_header.unused = 0
-
+    -- get original eth header
+    local orig_eth_header = cast(ETHER_HEADER_PTR_T, orig_pkt.data)
+    -- copy original eth header to ddc packet
+    copy(pkt.data, orig_eth_header, ETHER_HEADER_LEN)
+    -- change eth type in new packet
+    local eth_header = cast(ETHER_HEADER_PTR_T, pkt.data)
+    eth_header.ether_type = self.ether_type_ha
+    -- set ha header in new packet
+    self:_set_ha_header(pkt, ETHER_HEADER_LEN, seq_no, 0xFFFF, HYBRID_ACCESS_DDC_TYPE)
     return pkt
 end

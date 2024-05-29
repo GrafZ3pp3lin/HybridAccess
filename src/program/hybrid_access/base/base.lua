@@ -20,9 +20,13 @@ end
 function data_to_str(d, len)
     local text = ""
     for i = 0, len - 1, 1 do
-        text = string.format("%s %x", text, d[i])
+        text = string.format("%s %02X", text, d[i])
     end
     return text
+end
+
+function number_to_hex(i)
+    return string.format("%x", i)
 end
 
 local function link_loss_rate(drop, sent)
