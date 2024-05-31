@@ -631,7 +631,7 @@ function IO:open ()
          self.r.rx_tail = self.r.QRX_TAIL[self.cxq.qno]
          self.r.tx_tail = self.r.QTX_TAIL[self.cxq.qno]
       else
-         close()             -- Queue was not FREE.
+         self:close()             -- Queue was not FREE.
       end
    end
 end
