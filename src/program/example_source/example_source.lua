@@ -18,12 +18,14 @@ function run()
     local c = config.new()
     config.app(c, "synth", synth.Synth, {
         sizes = {64,67,128,133,192,256,384,512,777,1024},
+        src="02:00:00:00:00:00",
+        dst="02:00:00:00:00:01",
         random_payload = true
     })
-    config.app(c, "nic", intel_nic.Intel_avf, { pciaddr = pciaddr })
-    -- config.app(c, "link", intel_nic.IO, { pciaddr = pciaddr, queue = 0 })
+    config.app(c, "nic", intel_nic.Intel_avf, { pciaddr = pciaddr, nqueues = 1, macs = {"02:00:00:00:00:00", "02:00:00:00:00:01"} })
+    config.app(c, "link", intel_nic.IO, { pciaddr = pciaddr, queue = 0 })
 
-    config.link(c, "synth.output -> nic.input")
+    config.link(c, "synth.output -> link.input")
 
     engine.configure(c)
     engine.main({ duration = 10, report = { showlinks = true, showapps = true } })

@@ -17,7 +17,7 @@ function run(args)
        "Driver should be apps.intel_avf.intel_avf (is "..info.driver..")")
 
     local c = config.new()
-    config.app(c, "nic", intel_nic.Intel_avf, { pciaddr = pciaddr, nqueues = 1 })
+    config.app(c, "nic", intel_nic.Intel_avf, { pciaddr = pciaddr, nqueues = 1, macs = {"02:00:00:00:00:00", "02:00:00:00:00:01"} })
     config.app(c, "link", intel_nic.IO, { pciaddr = pciaddr, queue = 0 })
     config.app(c, "sink", basic.Sink)
 
