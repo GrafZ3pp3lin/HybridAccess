@@ -27,6 +27,7 @@ function run()
     config.app(c, "link", intel_nic.IO, { pciaddr = pciaddr, queue = 0 })
 
     config.link(c, "source.output -> link.input")
+    config.link(c, "link.input -> link.output")
 
     engine.configure(c)
     engine.main({ duration = 1, report = { showlinks = true, showapps = true } })
