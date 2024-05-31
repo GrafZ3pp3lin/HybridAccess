@@ -17,7 +17,7 @@ function run()
        "Driver should be apps.intel_avf.intel_avf (is "..info.driver..")")
 
     local c = config.new()
-    config.app(c, "source", pcap.PcapReader, "config/input.pcap")
+    config.app(c, "source", synth.Synth)
     config.app(c, "nic", intel_nic.Intel_avf, { pciaddr = pciaddr, nqueues = 1 })
     config.app(c, "link", intel_nic.IO, { pciaddr = pciaddr, queue = 0 })
 
