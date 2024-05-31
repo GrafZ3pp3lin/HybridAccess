@@ -12,7 +12,7 @@ function Printer:new ()
    return o
 end
 
-function Printer:pull ()
+function Printer:push ()
     local input = self.input.input
     for _ = 1, link.nreadable(input) do
         local p = link.receive(input)
