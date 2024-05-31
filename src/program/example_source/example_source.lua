@@ -2,7 +2,7 @@
 
 module(..., package.seeall)
 
-local basic = require("apps.basic.basic_apps")
+local synth = require("apps.test.synth")
 local intel_nic = require("apps.intel_avf.intel_avf")
 
 local pci = require("lib.hardware.pci")
@@ -16,7 +16,10 @@ function run()
        "Driver should be apps.intel_avf.intel_avf (is "..info.driver..")")
 
     local c = config.new()
-    config.app(c, "source", basic.Source)
+    config.app(c, "synth", synth.Synth, {
+        sizes = {64,67,128,133,192,256,384,512,777,1024},
+        random_payload = true
+    })
     config.app(c, "nic", intel_nic.Intel_avf, { pciaddr = pciaddr, nqueues = 1 })
     config.app(c, "link", intel_nic.IO, { pciaddr = pciaddr, queue = 0 })
 
