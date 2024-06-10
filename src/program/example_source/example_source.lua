@@ -18,17 +18,26 @@ function run()
 
     local c = config.new()
     config.app(c, "source", synth.Synth, {
-        sizes = {64,67,128,133,192,256,384,512,777,1024},
-        src="02:00:00:00:00:01",
+        sizes = {1024},
+        src="00:50:ba:85:85:ca",
         dst="ff:ff:ff:ff:ff:ff",
         random_payload = true
     })
-    config.app(c, "nic", intel_nic.Intel_avf, { pciaddr = pciaddr, nqueues = 1, macs = { "02:00:00:00:00:01" } })
-    config.app(c, "link", intel_nic.IO, { pciaddr = pciaddr, queue = 0 })
+    config.app(c, "nic", intel_nic.Intel_avf, { pciaddr = pciaddr, nqueues=1, macs = { "00:50:ba:85:85:ca"}})
+    config.app(c, "link", intel_nic.IO, { pciaddr = pciaddr, queue=0 })
 
-    config.link(c, "source.output -> link.input")
-    config.link(c, "link.input -> link.output")
+    config.app(c, "nic_in", intel_nic.Intel_avf, { pciaddr = "00:1c.0", macs = {"00:50:ba:85:85:ca"}})
+    --config.app(c, "link_in", intel_nic.IO, { pciaddr = "00:1c.0", queue = 0 })
+
+
+
+
+    config.link(c, "source.output -> nic_in.input")
+    --config.link(c, "link_in.output -> link.input")
+    --config.link(c, "source.output -> link.input")
+    --config.link(c, "link.input -> link.output")
 
     engine.configure(c)
-    engine.main({ duration = 1, report = { showlinks = true, showapps = true } })
+    engine.busywait = true
+    engine.main({ duration = 5, report = { showlinks = true, showapps = true } })
 end
