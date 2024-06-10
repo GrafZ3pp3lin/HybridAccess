@@ -7,15 +7,8 @@ local synth = require("apps.test.synth")
 local connectx = require("apps.mellanox.connectx")
 local mac_forwarder = require("program.hybrid_access.middleware.mac_forwarder")
 
-local pci = require("lib.hardware.pci")
-
 function run()
     local pciaddr = "0000:02:0f.0" -- enp2s15
-
-    local info = pci.device_info(pciaddr)
-    print(info.pciaddress, info.vendor, info.device, info.model)
-    assert(info.driver == 'apps.mellanox.connectx',
-       "Driver should be apps.mellanox.connectx (is "..info.driver..")")
 
     local c = config.new()
     config.app(c, "source", synth.Synth, {

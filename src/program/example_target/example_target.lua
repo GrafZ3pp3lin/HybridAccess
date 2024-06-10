@@ -5,16 +5,8 @@ module(..., package.seeall)
 local basic = require("apps.basic.basic_apps")
 local connectx = require("apps.mellanox.connectx")
 
-local pci = require("lib.hardware.pci")
-
-
 function run(args)
     local pciaddr = "0000:02:0d.0"
-
-    local info = pci.device_info(pciaddr)
-    print(info.pciaddress, info.vendor, info.device, info.model)
-    assert(info.driver == 'apps.mellanox.connectx',
-       "Driver should be apps.mellanox.connectx (is "..info.driver..")")
 
     local c = config.new()
     config.app(c, "nic", connectx.ConnectX, { pciaddress = pciaddr, queues={{id="q1"}} })
