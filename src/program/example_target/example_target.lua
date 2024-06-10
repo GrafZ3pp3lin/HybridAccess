@@ -24,5 +24,5 @@ function run(args)
     config.link(c, "link.output -> sink.input")
 
     engine.configure(c)
-    engine.main({ duration = 3, report = { showlinks = true, showapps = true } })
+    engine.main({ duration = 100, report = { showlinks = true, showapps = true } })
 end
