@@ -4,40 +4,33 @@ module(..., package.seeall)
 
 local pcap = require("apps.pcap.pcap")
 local synth = require("apps.test.synth")
-local intel_nic = require("apps.intel_avf.intel_avf")
+local connectx = require("apps.mellanox.connectx")
+local mac_forwarder = require("program.hybrid_access.middleware.mac_forwarder")
 
 local pci = require("lib.hardware.pci")
 
 function run()
-    local pciaddr = "0000:00:10.0"
+    local pciaddr = "0000:02:0f.0" -- enp2s15
 
     local info = pci.device_info(pciaddr)
     print(info.pciaddress, info.vendor, info.device, info.model)
-    assert(info.driver == 'apps.intel_avf.intel_avf',
-       "Driver should be apps.intel_avf.intel_avf (is "..info.driver..")")
+    assert(info.driver == 'apps.mellanox.connectx',
+       "Driver should be apps.mellanox.connectx (is "..info.driver..")")
 
     local c = config.new()
     config.app(c, "source", synth.Synth, {
-        sizes = {1024},
-        src="00:50:ba:85:85:ca",
+        sizes = {64,67,128,133,192,256,384,512,777,1024},
+        src="02:00:00:00:00:01",
         dst="ff:ff:ff:ff:ff:ff",
         random_payload = true
     })
-    config.app(c, "nic", intel_nic.Intel_avf, { pciaddr = pciaddr, nqueues=1, macs = { "00:50:ba:85:85:ca"}})
-    config.app(c, "link", intel_nic.IO, { pciaddr = pciaddr, queue=0 })
+    config.app(c, "nic", connectx.ConnectX, { pciaddress = pciaddr, queues={{id="q1"}} })
+    config.app(c, "link", connectx.IO, { pciaddress = pciaddr, queue = "q1" })
+    config.app(c, "forwarder", mac_forwarder.MacForwarder, { source_mac = "22:6a:af:6f:58:d2", destination_mac = "f6:fa:ed:3a:f4:d4" })
 
-    config.app(c, "nic_in", intel_nic.Intel_avf, { pciaddr = "00:1c.0", macs = {"00:50:ba:85:85:ca"}})
-    --config.app(c, "link_in", intel_nic.IO, { pciaddr = "00:1c.0", queue = 0 })
-
-
-
-
-    config.link(c, "source.output -> nic_in.input")
-    --config.link(c, "link_in.output -> link.input")
-    --config.link(c, "source.output -> link.input")
-    --config.link(c, "link.input -> link.output")
+    config.link(c, "source.output -> forwarder.input")
+    config.link(c, "forwarder.output -> link.input")
 
     engine.configure(c)
-    engine.busywait = true
-    engine.main({ duration = 5, report = { showlinks = true, showapps = true } })
+    engine.main({ duration = 10, report = { showlinks = true, showapps = true } })
 end

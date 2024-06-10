@@ -4,13 +4,13 @@ local ffi = require("ffi")
 local link = require("core.link")
 local ethernet = require("lib.protocol.ethernet")
 
-Layer2Forwarder = {}
-Layer2Forwarder.config = {
+MacForwarder = {}
+MacForwarder.config = {
     source_mac = { required = true },
     destination_mac = { required = true }
 }
 
-function Layer2Forwarder:new(conf)
+function MacForwarder:new(conf)
     local o = {
         source_mac = ethernet:pton(conf.source_mac),
         destination_mac = ethernet:pton(conf.destination_mac)
@@ -20,7 +20,7 @@ function Layer2Forwarder:new(conf)
     return o
 end
 
-function Layer2Forwarder:push()
+function MacForwarder:push()
     local input = assert(self.input.input, "input port not found")
     local output = assert(self.output.output, "output port not found")
 

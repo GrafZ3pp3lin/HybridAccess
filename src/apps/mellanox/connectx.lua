@@ -205,6 +205,7 @@ ConnectX.__index = ConnectX
 local mlx_types = {
    ["0x1013" ] = 4, -- ConnectX4
    ["0x1017" ] = 5, -- ConnectX5
+   ["0x1018" ] = 5, -- ConnectX5 Virtual Function
    ["0x1019" ] = 5, -- ConnectX5
    ["0x101d" ] = 6, -- ConnectX6
    ["0x1021" ] = 7, -- ConnectX7
@@ -549,6 +550,12 @@ function ConnectX:new (conf)
       txdrop    = {counter},
       txerrors  = {counter},
    }
+
+   -- Set the MAC address on the VPORT. This signals the driver on the
+   -- PF to create a forwarding rule in the E-switch FDB to direct the
+   -- traffic destined to that address to our NIC VPORT
+   hca:set_nic_vport_allowed_uc_mac(vport_context.permanent_address)
+
    -- Create per-queue drop counters named by the queue identifiers in
    -- the configuration.
    for _, queue in ipairs(conf.queues) do
@@ -848,7 +855,7 @@ end
 
 -- Provide the NIC with freshly allocated memory.
 function HCA:alloc_pages (num_pages)
-   assert(num_pages > 0)
+   assert(num_pages >= 0)
    if debug_info then
       print(("Allocating %d pages to HW"):format(num_pages))
    end
@@ -1191,6 +1198,19 @@ function HCA:modify_nic_vport_context (mtu, promisc_uc, promisc_mc, promisc_all)
       :input("promisc_all",  0x100 + 0xF0, 29, 29, promisc_all and 1 or 0)
       :execute()
 end
+
+function HCA:set_nic_vport_allowed_uc_mac (mac)
+   local mac_hi = shr(bswap(mac:subbits(0,16)), 16)
+   local mac_lo = shr(bit.bswap(mac:subbits(16,48)), 32)
+   self:command("MODIFY_NIC_VPORT_CONTEXT", 0x208, 0x0C)
+      :input("opcode",       0x00, 31, 16, 0x755)
+      :input("field_select", 0x0C, 31, 0, 0x04) -- allowed_list
+      :input("allowed_list_type", 0x100 + 0xF0, 26, 24, 0) -- curr_uc_mac
+      :input("allowed_list_size", 0x100 + 0xF0, 11, 0, 1)
+      :input("curr_uc_mac",  0x100 + 0x100 + 0x00, 15, 0, mac_hi)
+      :input("curr_uc_mac",  0x100 + 0x100 + 0x04, 31, 0, mac_lo)
+      :execute()
+end   
 
 ---------------------------------------------------------------
 -- TIR and TIS

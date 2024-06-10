@@ -3,26 +3,26 @@
 module(..., package.seeall)
 
 local basic = require("apps.basic.basic_apps")
-local intel_nic = require("apps.intel_avf.intel_avf")
+local connectx = require("apps.mellanox.connectx")
 
 local pci = require("lib.hardware.pci")
 
 
 function run(args)
-    local pciaddr = "0000:00:1b.0"
+    local pciaddr = "0000:02:0d.0"
 
     local info = pci.device_info(pciaddr)
     print(info.pciaddress, info.vendor, info.device, info.model)
-    assert(info.driver == 'apps.intel_avf.intel_avf',
-       "Driver should be apps.intel_avf.intel_avf (is "..info.driver..")")
+    assert(info.driver == 'apps.mellanox.connectx',
+       "Driver should be apps.mellanox.connectx (is "..info.driver..")")
 
     local c = config.new()
-    config.app(c, "nic", intel_nic.Intel_avf, { pciaddr = pciaddr, nqueues = 1 })
-    config.app(c, "link", intel_nic.IO, { pciaddr = pciaddr, queue = 0 })
+    config.app(c, "nic", connectx.ConnectX, { pciaddress = pciaddr, queues={{id="q1"}} })
+    config.app(c, "link", connectx.IO, { pciaddress = pciaddr, queue = "q1" })
     config.app(c, "sink", basic.Sink)
 
     config.link(c, "link.output -> sink.input")
 
     engine.configure(c)
-    engine.main({ duration = 100, report = { showlinks = true, showapps = true } })
+    engine.main({ duration = 10, report = { showlinks = true, showapps = true } })
 end
