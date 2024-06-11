@@ -8,8 +8,6 @@ local counter = require("core.counter")
 
 local co = require("program.hybrid_access.base.constants")
 
-local C = ffi.C
-
 local HYBRID_ACCESS_TYPE = co.HYBRID_ACCESS_TYPE
 
 Recombination = {}
@@ -21,14 +19,12 @@ Recombination.shm = {
     timeout_startet = { counter },
     timeout_reached = { counter },
     drop_seq_no = { counter },
-    time_waited = { counter },
 }
 
 function Recombination:new(conf)
     local o = {
         next_pkt_num = ffi.new("uint64_t", 0),
         link_delays = conf.link_delays,
-        last_waited = ffi.new("uint64_t", 0),
         wait_until = nil
     }
     if conf.mode == "IP" then
@@ -56,7 +52,6 @@ function Recombination:report()
     print(
         string.format("%20s dropped packages because of too low seq num",
             lib.comma_value(counter.read(self.shm.drop_seq_no))))
-    print(string.format("%20s ns waited", lib.comma_value(counter.read(self.shm.time_waited))))
 end
 
 function Recombination:pull()
@@ -67,11 +62,6 @@ function Recombination:pull()
     end
 
     if not process then
-        if self.last_waited > 0 then
-            local now = C.get_time_ns()
-            counter.add(self.shm.time_waited, now - self.last_waited)
-            self.last_waited = now
-        end
         return
     end
 
@@ -125,7 +115,6 @@ function Recombination:process_links(output)
             elseif self.wait_until == nil then
                 local now = engine.now()
                 counter.add(self.shm.timeout_startet)
-                self.last_waited = 0
                 self.wait_until = now + self:estimate_wait_time()
                 self.empty_links = self:get_empty_links()
                 break
@@ -188,8 +177,7 @@ function Recombination:estimate_wait_time()
     if index == 2 then
         return times[1]
     elseif index == 1 then
-        print(link.empty(self.input[1]), link.empty(self.input[2]))
-        return 0
+        error("could not estimate wait time due to no empty links")
     else
         return math.max(unpack(times))
     end
