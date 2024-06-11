@@ -28,11 +28,28 @@ function run(args)
         config.link(c, l)
     end
 
+    if cfg.report_interval ~= nil then
+        local report_timer = timer.new(
+            "report",
+            function ()
+                engine.report({ showload = true, showlinks = true, showapps = true })
+            end,
+            cfg.report_interval, -- every 5 seconds
+            'repeating'
+        )
+        -- print packets statistics
+        timer.activate(report_timer)
+    end
+
     engine.configure(c)
     local start = engine.now()
     engine.busywait = true
-    engine.main({ duration = cfg.duration, no_report = true })
+    engine.main({ duration = cfg.duration })
+
     local stop = engine.now()
+    if cfg.report_interval ~= nil then
+        timer.cancel(report_timer)
+    end
 
     if cfg.report_file ~= nil then
         base.report_to_file(cfg.report_file, start, stop)
