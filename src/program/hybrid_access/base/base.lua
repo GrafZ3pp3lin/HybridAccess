@@ -11,7 +11,10 @@ local co = require("program.hybrid_access.base.constants")
 
 local cast = ffi.cast
 
-local ETHER_HEADER_PTR_T, IPV4_HEADER_PTR_T, IPV4_ETH_TYPE, ETHER_HEADER_LEN = co.ETHER_HEADER_PTR_T, co.IPV4_HEADER_PTR_T, co.IPV4_ETH_TYPE, co.ETHER_HEADER_LEN
+local ETHER_HEADER_PTR_T, IPV4_HEADER_PTR_T, HA_HEADER_PTR_T,
+IPV4_ETH_TYPE, HYBRID_ACCESS_ETH_TYPE, ETHER_HEADER_LEN =
+    co.ETHER_HEADER_PTR_T, co.IPV4_HEADER_PTR_T, co.HA_HEADER_PTR_T,
+    co.IPV4_ETH_TYPE, co.HYBRID_ACCESS_ETH_TYPE, co.ETHER_HEADER_LEN
 
 function dump(o)
     if type(o) == 'table' then
