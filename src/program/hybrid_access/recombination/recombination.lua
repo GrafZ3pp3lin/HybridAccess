@@ -40,8 +40,8 @@ function Recombination:new(conf)
 end
 
 function Recombination:report()
-    local in1_stats = link.stats(self.input[1])
-    local in2_stats = link.stats(self.input[2])
+    local in1_stats = link.stats(self.input.input1)
+    local in2_stats = link.stats(self.input.input2)
     local output_stats = link.stats(self.output.output)
 
     print(string.format("%20s # / %20s b in 1", lib.comma_value(in1_stats.txpackets), lib.comma_value(in1_stats.txbytes)))
