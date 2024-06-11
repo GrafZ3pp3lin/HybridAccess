@@ -32,7 +32,7 @@ function run(args)
         local report_timer = timer.new(
             "report",
             function ()
-                engine.report({ showload = true, showlinks = true, showapps = true })
+                engine.report({ showload = cfg.report_load, showlinks = cfg.report_links, showapps = cfg.report_apps })
             end,
             cfg.report_interval, -- every 5 seconds
             'repeating'
