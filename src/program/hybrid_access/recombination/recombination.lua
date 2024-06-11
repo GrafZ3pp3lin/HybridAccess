@@ -54,7 +54,7 @@ function Recombination:report()
             lib.comma_value(counter.read(self.shm.drop_seq_no))))
 end
 
-function Recombination:pull()
+function Recombination:push()
     local process, waited = true, false
 
     if self.wait_until ~= nil then
