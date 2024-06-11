@@ -21,10 +21,10 @@ end
 
 function LoadBalancer:setup(cfg)
     if cfg.mode == "IP" then
-        print(string.format("Loadbalancer in ip mode from %s to %s", cfg.self_ip, cfg.target_ip))
+        print(string.format("Loadbalancer %s in ip mode from %s to %s", self.class_type, cfg.self_ip, cfg.target_ip))
         self.hybrid_access = require("program.hybrid_access.base.hybrid_access_ip").HybridAccessIp:new(cfg)
     else
-        print("Loadbalancer in eth mode")
+        print(string.format("Loadbalancer %s in eth mode", self.class_type))
         self.hybrid_access = require("program.hybrid_access.base.hybrid_access").HybridAccess:new()
     end
 end
