@@ -60,22 +60,19 @@ function LoadBalancer:send_pkt_with_ddc(pkt, l_out, l_delay)
     link.transmit(l_out, p_new)
 end
 
-function LoadBalancer:file_report(f)
+function LoadBalancer:report()
     local input_stats = link.stats(self.input.input)
     local out1_stats = link.stats(self.output.output1)
     local out2_stats = link.stats(self.output.output2)
 
     if self.class_type then
-        f:write("Loadbalancer type: " .. self.class_type, "\n")
+        print("Loadbalancer type: " .. self.class_type)
     end
 
-    f:write(
-        string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)),
-        "\n")
-    f:write(
-        string.format("%20s # / %20s b out 1", lib.comma_value(out1_stats.txpackets), lib.comma_value(out1_stats.txbytes)),
-        "\n")
-    f:write(
-        string.format("%20s # / %20s b out 2", lib.comma_value(out2_stats.txpackets), lib.comma_value(out2_stats.txbytes)),
-        "\n")
+    print(
+        string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)))
+    print(
+        string.format("%20s # / %20s b out 1", lib.comma_value(out1_stats.txpackets), lib.comma_value(out1_stats.txbytes)))
+    print(
+        string.format("%20s # / %20s b out 2", lib.comma_value(out2_stats.txpackets), lib.comma_value(out2_stats.txbytes)))
 end

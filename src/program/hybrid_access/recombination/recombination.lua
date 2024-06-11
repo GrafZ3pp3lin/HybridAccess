@@ -43,27 +43,20 @@ function Recombination:new(conf)
     return o
 end
 
-function Recombination:file_report(f)
+function Recombination:report()
     local in1_stats = link.stats(self.input[1])
     local in2_stats = link.stats(self.input[2])
     local output_stats = link.stats(self.output.output)
 
-    f:write(
-        string.format("%20s # / %20s b in 1", lib.comma_value(in1_stats.txpackets), lib.comma_value(in1_stats.txbytes)),
-        "\n")
-    f:write(
-        string.format("%20s # / %20s b in 2", lib.comma_value(in2_stats.txpackets), lib.comma_value(in2_stats.txbytes)),
-        "\n")
-    f:write(
-        string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
-        "\n")
-    f:write(string.format("%20s timeout started", lib.comma_value(counter.read(self.shm.timeout_startet))), "\n")
-    f:write(string.format("%20s timeout reached", lib.comma_value(counter.read(self.shm.timeout_reached))), "\n")
-    f:write(
+    print(string.format("%20s # / %20s b in 1", lib.comma_value(in1_stats.txpackets), lib.comma_value(in1_stats.txbytes)))
+    print(string.format("%20s # / %20s b in 2", lib.comma_value(in2_stats.txpackets), lib.comma_value(in2_stats.txbytes)))
+    print(string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)))
+    print(string.format("%20s timeout started", lib.comma_value(counter.read(self.shm.timeout_startet))))
+    print(string.format("%20s timeout reached", lib.comma_value(counter.read(self.shm.timeout_reached))))
+    print(
         string.format("%20s dropped packages because of too low seq num",
-            lib.comma_value(counter.read(self.shm.drop_seq_no))),
-        "\n")
-    f:write(string.format("%20s ns waited", lib.comma_value(counter.read(self.shm.time_waited))), "\n")
+            lib.comma_value(counter.read(self.shm.drop_seq_no))))
+    print(string.format("%20s ns waited", lib.comma_value(counter.read(self.shm.time_waited))))
 end
 
 function Recombination:pull()
