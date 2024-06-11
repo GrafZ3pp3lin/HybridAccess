@@ -1,8 +1,17 @@
 module(..., package.seeall)
 
+local ffi = require("ffi")
 local engine = require("core.app")
 local counter = require("core.counter")
 local lib = require("core.lib")
+local ethernet = require("lib.protocol.ethernet")
+local ipv4 = require("lib.protocol.ipv4")
+
+local co = require("program.hybrid_access.base.constants")
+
+local cast = ffi.cast
+
+local ETHER_HEADER_PTR_T, IPV4_HEADER_PTR_T, IPV4_ETH_TYPE, ETHER_HEADER_LEN = co.ETHER_HEADER_PTR_T, co.IPV4_HEADER_PTR_T, co.IPV4_ETH_TYPE, co.ETHER_HEADER_LEN
 
 function dump(o)
     if type(o) == 'table' then
@@ -15,6 +24,21 @@ function dump(o)
     else
         return tostring(o)
     end
+end
+
+function pkt_to_str(pkt)
+    local str = ""
+    local eth_header = cast(ETHER_HEADER_PTR_T, pkt.data)
+    local eth_type = lib.ntohs(eth_header.ether_type)
+    str = string.format("dst: %s, src: %s, type: %02X", ethernet:ntop(eth_header.ether_dhost), ethernet:ntop(eth_header.ether_shost), eth_type)
+    if eth_type == IPV4_ETH_TYPE then
+        local ip_header = cast(IPV4_HEADER_PTR_T, pkt.data + ETHER_HEADER_LEN)
+        str = string.format("%s - ttl: %i, proto: %i, src: %s, dst: %s", src, ip_header.ttl, ip_header.protocol, ipv4:ntop(ip_header.src_ip), ipv4:ntop(ip_header.dst_ip))
+    elseif eth_type == HYBRID_ACCESS_ETH_TYPE then
+        local ha_header = cast(HA_HEADER_PTR_T, pkt.data + ETHER_HEADER_LEN)
+        str = string.format("%s - seq: %i, buf: %i, type: %i", str, ha_header.seq_no, lib.ntohs(ha_header.buf_type), ha_header.type)
+    end
+    return str
 end
 
 function data_to_str(d, len)

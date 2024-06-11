@@ -23,7 +23,7 @@ function Printer:push()
 
     for _ = 1, link.nreadable(input) do
         local p = link.receive(input)
-        print(self.name, base.data_to_str(p.data, p.length))
+        print(self.name, base.pkt_to_str(p))
         link.transmit(output, p)
     end
 end
