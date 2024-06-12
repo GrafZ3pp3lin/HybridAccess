@@ -12,8 +12,11 @@ local min = math.min
 
 TBRateLimiter = {
     config = {
+        -- bytes per second
         rate             = { required = true },
-        bucket_capacity  = { required = true },
+        -- bucket capacity in byte (default 5000)
+        bucket_capacity  = { default = 5000 },
+        -- initial capacity in bucket (eg 3000)
         initial_capacity = { required = false }
     },
     shm = {
