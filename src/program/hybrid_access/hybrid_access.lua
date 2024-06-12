@@ -39,8 +39,8 @@ function run(args)
     config.app(c, "forwarder_out1", forwarder.MacForwarder, { source_mac = cfg.forwarder_out1.src, destination_mac = cfg.forwarder_out1.dst })
     config.app(c, "forwarder_out2", forwarder.MacForwarder, { source_mac = cfg.forwarder_out2.src, destination_mac = cfg.forwarder_out2.dst })
 
-    config.app(c, "rate_limiter_1", rate_limiter.TBRateLimiter, { rate = cfg.link_1_rate })
-    config.app(c, "rate_limiter_2", rate_limiter.TBRateLimiter, { rate = cfg.link_2_rate })
+    config.app(c, "rate_limiter_1", rate_limiter.TBRateLimiter, cfg.rate_limiter_1)
+    config.app(c, "rate_limiter_2", rate_limiter.TBRateLimiter, cfg.rate_limiter_2)
 
     -- loadbalancer
     config.link(c, "link_in.output -> loadbalancer.input")
