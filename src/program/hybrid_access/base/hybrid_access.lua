@@ -41,6 +41,9 @@ function HybridAccess:get_header(pkt)
 end
 
 function HybridAccess:_move_eth_header(pkt, shift_length)
+    if pkt.length + shift_length > 1514 then
+        error("Can not add hybrid access header to paket. It would be to large: "..pkt.length.." + "..shift_length)
+    end
     -- buffer current header
     local old_eth_header = cast(ETHER_HEADER_PTR_T, pkt.data)
     copy(self.eth_buf_add, old_eth_header, ETHER_HEADER_LEN)
