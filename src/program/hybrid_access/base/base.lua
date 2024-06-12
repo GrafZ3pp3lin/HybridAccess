@@ -34,7 +34,7 @@ function pkt_to_str(pkt)
     local str = ""
     local eth_header = cast(ETHER_HEADER_PTR_T, pkt.data)
     local eth_type = lib.ntohs(eth_header.ether_type)
-    str = string.format("dst: %s, src: %s, type: %02X", ethernet:ntop(eth_header.ether_dhost), ethernet:ntop(eth_header.ether_shost), eth_type)
+    str = string.format("size: %i, dst: %s, src: %s, type: %02X", pkt.length, ethernet:ntop(eth_header.ether_dhost), ethernet:ntop(eth_header.ether_shost), eth_type)
     if eth_type == IPV4_ETH_TYPE then
         local ip_header = cast(IPV4_HEADER_PTR_T, pkt.data + ETHER_HEADER_LEN)
         str = string.format("%s - ttl: %i, proto: %i, src: %s, dst: %s", str, ip_header.ttl, ip_header.protocol, ipv4:ntop(ip_header.src_ip), ipv4:ntop(ip_header.dst_ip))
