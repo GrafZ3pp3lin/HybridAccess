@@ -13,9 +13,9 @@ local co = require("program.hybrid_access.base.constants")
 local cast = ffi.cast
 
 local ETHER_HEADER_PTR_T, IPV4_HEADER_PTR_T, HA_HEADER_PTR_T,
-IPV4_ETH_TYPE, HYBRID_ACCESS_ETH_TYPE, ETHER_HEADER_LEN, IPV4_HEADER_LEN =
+IPV4_ETH_TYPE, HYBRID_ACCESS_ETH_TYPE, ETHER_HEADER_LEN, HA_HEADER_LEN =
     co.ETHER_HEADER_PTR_T, co.IPV4_HEADER_PTR_T, co.HA_HEADER_PTR_T,
-    co.IPV4_ETH_TYPE, co.HYBRID_ACCESS_ETH_TYPE, co.ETHER_HEADER_LEN, co.IPV4_HEADER_LEN
+    co.IPV4_ETH_TYPE, co.HYBRID_ACCESS_ETH_TYPE, co.ETHER_HEADER_LEN, co.HA_HEADER_LEN
 
 function dump(o)
     if type(o) == 'table' then
@@ -43,7 +43,7 @@ function pkt_to_str(pkt)
         local buf_type = ha_header.buf_type
         str = string.format("%s - seq: %i, buf: %i, type: %i", str, ha_header.seq_no, buf_type, ha_header.type)
         if buf_type == IPV4_ETH_TYPE then
-            local ip_header = cast(IPV4_HEADER_PTR_T, pkt.data + ETHER_HEADER_LEN + IPV4_HEADER_LEN)
+            local ip_header = cast(IPV4_HEADER_PTR_T, pkt.data + ETHER_HEADER_LEN + HA_HEADER_LEN)
             str = string.format("%s - ttl: %i, proto: %i, src: %s, dst: %s", str, ip_header.ttl, ip_header.protocol, ipv4:ntop(ip_header.src_ip), ipv4:ntop(ip_header.dst_ip))
         end
     end
