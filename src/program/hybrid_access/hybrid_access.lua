@@ -10,6 +10,7 @@ local mellanox = require("apps.mellanox.connectx")
 local recombination = require("program.hybrid_access.recombination.recombination")
 local forwarder = require("program.hybrid_access.middleware.mac_forwarder")
 local rate_limiter = require("program.hybrid_access.middleware.rate_limiter")
+local delayer = require("program.hybrid_access.middleware.delayer")
 
 local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
@@ -42,12 +43,17 @@ function run(args)
     config.app(c, "rate_limiter_1", rate_limiter.TBRateLimiter, cfg.rate_limiter_1)
     config.app(c, "rate_limiter_2", rate_limiter.TBRateLimiter, cfg.rate_limiter_2)
 
+    config.app(c, "delayer_1", delayer.Delayer, { delay = cfg.delay_1 })
+    config.app(c, "delayer_2", delayer.Delayer, { delay = cfg.delay_2 })
+
     -- loadbalancer
     config.link(c, "link_in.output -> loadbalancer.input")
     config.link(c, "loadbalancer.output1 -> rate_limiter_1.input")
     config.link(c, "loadbalancer.output2 -> rate_limiter_2.input")
-    config.link(c, "rate_limiter_1.output -> forwarder_out1.input")
-    config.link(c, "rate_limiter_2.output -> forwarder_out2.input")
+    config.link(c, "rate_limiter_1.output -> delayer_1.input")
+    config.link(c, "rate_limiter_2.output -> delayer_2.input")
+    config.link(c, "delayer_1.output -> forwarder_out1.input")
+    config.link(c, "delayer_2.output -> forwarder_out2.input")
     config.link(c, "forwarder_out1.output -> link_out1.input")
     config.link(c, "forwarder_out2.output -> link_out2.input")
     -- recombination
