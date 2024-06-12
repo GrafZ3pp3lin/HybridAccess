@@ -5,6 +5,11 @@ module(..., package.seeall)
 local engine = require("core.app")
 local lib = require("core.lib")
 
+local mellanox = require("apps.mellanox.connectx")
+
+local recombination = require("program.hybrid_access.recombination.recombination")
+local forwarder = require("program.hybrid_access.middleware.mac_forwarder")
+
 local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
 
@@ -17,24 +22,42 @@ function run(args)
     local cfg = ini.Ini:parse(path)
 
     local c = config.new()
-    for _, app in ipairs(cfg.apps) do
-        if not lib.have_module(app.path) then
-            error("app %s does not exists", app.path)
-        end
-        config.app(c, app.name, require(app.path)[app.type], app.config)
-    end
 
-    for _, l in ipairs(cfg.links) do
-        config.link(c, l)
-    end
+    config.app(c, "nic_in", mellanox.ConnectX, { pciaddress = cfg.pci_in, queues = {{ id = "q1" }}})
+    config.app(c, "nic_out1", mellanox.ConnectX, { pciaddress = cfg.pci_out1, queues = {{ id = "q1" }}})
+    config.app(c, "nic_out2", mellanox.ConnectX, { pciaddress = cfg.pci_out2, queues = {{ id = "q1" }}})
 
+    config.app(c, "link_in", mellanox.IO, { pciaddress = cfg.pci_in, queue = "q1" })
+    config.app(c, "link_out1", mellanox.IO, { pciaddress = cfg.pci_out1, queue = "q1" })
+    config.app(c, "link_out2", mellanox.IO, { pciaddress = cfg.pci_out2, queue = "q1" })
+
+    config.app(c, "loadbalancer", require(cfg.loadbalancer.path)[cfg.loadbalancer.type], cfg.loadbalancer.config)
+    config.app(c, "recombination", recombination.Recombination, cfg.recombination.config)
+
+    config.app(c, "forwarder_in", forwarder.MacForwarder, { source_mac = cfg.forwarder_in.src, destination_mac = cfg.forwarder_in.dst })
+    config.app(c, "forwarder_out1", forwarder.MacForwarder, { source_mac = cfg.forwarder_out1.src, destination_mac = cfg.forwarder_out1.dst })
+    config.app(c, "forwarder_out2", forwarder.MacForwarder, { source_mac = cfg.forwarder_out2.src, destination_mac = cfg.forwarder_out2.dst })
+
+    -- loadbalancer
+    config.link(c, "link_in.output -> loadbalancer.input")
+    config.link(c, "loadbalancer.output1 -> forwarder_out1.input")
+    config.link(c, "loadbalancer.output2 -> forwarder_out2.input")
+    config.link(c, "forwarder_out1.output -> link_out1.input")
+    config.link(c, "forwarder_out2.output -> link_out2.input")
+    -- recombination
+    config.link(c, "link_out1.output -> recombination.input1")
+    config.link(c, "link_out2.output -> recombination.input2")
+    config.link(c, "recombination.output -> forwarder_in.input")
+    config.link(c, "forwarder_in.output -> link_in.input")
+
+    local report_timer = nil
     if cfg.report_interval ~= nil then
-        local report_timer = timer.new(
+        report_timer = timer.new(
             "report",
             function ()
                 engine.report({ showload = cfg.report_load, showlinks = cfg.report_links, showapps = cfg.report_apps })
             end,
-            cfg.report_interval, -- every 5 seconds
+            cfg.report_interval,
             'repeating'
         )
         -- print packets statistics
@@ -47,7 +70,7 @@ function run(args)
     engine.main({ duration = cfg.duration })
 
     local stop = engine.now()
-    if cfg.report_interval ~= nil then
+    if report_timer ~= nil then
         timer.cancel(report_timer)
     end
 
