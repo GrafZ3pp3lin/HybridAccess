@@ -71,7 +71,7 @@ function Delayer:push()
     end
 
     local now = C.get_time_ns()
-    local limit = engine.pull_npackets - link.nreadable(output)
+    local limit = link.nwritable(output)
     -- local transmitted = 0
 
     while self.queue:size() > 0 and limit > 0 do
