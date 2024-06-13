@@ -73,9 +73,8 @@ function Delayer:push()
         local buf_pkt = self.queue:look()
         if buf_pkt.release_time <= now then
             --self:send_buffer(buffer, output)
-            local p = buf_pkt.packet
-            link.transmit(output, p)
-            local _ = self.queue:pop()
+            local pkt = self.queue:pop()
+            link.transmit(output, pkt.packet)
         else
             break
         end

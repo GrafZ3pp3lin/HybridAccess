@@ -82,19 +82,6 @@ function run(args)
         pipeline2 = pipeline2.." -> rate limiter"
     end
 
-    if cfg.link1.enable.delayer == true then
-        config.app(c, "delayer_1", delayer.Delayer, cfg.link1.delayer)
-        config.link(c, node_out1.." -> delayer_1.input")
-        node_out1 = "delayer_1.output"
-        pipeline1 = pipeline1.." -> delayer"
-    end
-    if cfg.link2.enable.delayer == true then
-        config.app(c, "delayer_2", delayer.Delayer, cfg.link2.delayer)
-        config.link(c, node_out2.." -> delayer_2.input")
-        node_out2 = "delayer_2.output"
-        pipeline2 = pipeline2.." -> delayer"
-    end
-
     if cfg.link1.enable.forwarder == true then
         config.app(c, "forwarder_out1", forwarder.MacForwarder, cfg.link1.forwarder)
         config.link(c, node_out1.." -> forwarder_out1.input")
@@ -106,6 +93,19 @@ function run(args)
         config.link(c, node_out2.." -> forwarder_out2.input")
         node_out2 = "forwarder_out2.output"
         pipeline2 = pipeline2.." -> forwarder"
+    end
+
+    if cfg.link1.enable.delayer == true then
+        config.app(c, "delayer_1", delayer.Delayer, cfg.link1.delayer)
+        config.link(c, node_out1.." -> delayer_1.input")
+        node_out1 = "delayer_1.output"
+        pipeline1 = pipeline1.." -> delayer"
+    end
+    if cfg.link2.enable.delayer == true then
+        config.app(c, "delayer_2", delayer.Delayer, cfg.link2.delayer)
+        config.link(c, node_out2.." -> delayer_2.input")
+        node_out2 = "delayer_2.output"
+        pipeline2 = pipeline2.." -> delayer"
     end
 
     if cfg.link1.enable.printer_out == true then
