@@ -75,7 +75,7 @@ function Delayer:push()
         if now >= buf_pkt.release_time then
             --self:send_buffer(buffer, output)
             local p = buf_pkt.packet
-            if p.data + 12 ~= 0x44 or p.data + 13 ~= 0x94 then
+            if p.data + 12 ~= 0x94 or p.data + 13 ~= 0x44 then
                 print(base.pkt_to_str(p))
             end
             link.transmit(output, p)
