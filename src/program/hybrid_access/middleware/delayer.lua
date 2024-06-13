@@ -6,6 +6,8 @@ local lib = require("core.lib")
 local link = require("core.link")
 local engine = require("core.app")
 
+local C = ffi.C
+
 local queue = require("program.hybrid_access.base.queue")
 
 require("core.packet_h")
@@ -13,27 +15,25 @@ require("core.packet_h")
 local link_buffer = ffi.typeof([[
     struct {
         struct packet   *packets[1024];
-        double          release_time;
-        int             length;
+        uint64_t        release_time;
+        uint32_t        length;
     } __attribute__((packed))
 ]])
 
-local MAX_LINK_SPACE = link.max
-
 Delayer = {
     config = {
-        -- delay in seconds
-        delay = { default = 0.03 }
+        -- delay in ms
+        delay = { default = 30 }
     }
 }
 
 function Delayer:new(conf)
     assert(conf.delay >= 0, "delay has to be >= 0")
     local o = {
-        delay = conf.delay,
         queue = queue.Queue:new(),
         max_buffered = 0
     }
+    o.delay = ffi.new("uint64_t", conf.delay * 1000000)
     setmetatable(o, self)
     self.__index = self
     return o
@@ -47,7 +47,7 @@ function Delayer:pull()
     end
 
     local buffer = ffi.new(link_buffer)
-    buffer.release_time = engine.now() + self.delay
+    buffer.release_time = C.get_time_ns() + self.delay
     buffer.length = length
 
     for i = 0, length - 1 do
@@ -63,13 +63,13 @@ function Delayer:pull()
 end
 
 function Delayer:push()
+    local output = assert(self.output.output, "output port not found")
     if self.queue:size() <= 0 then
         return
     end
 
-    local output = assert(self.output.output, "output port not found")
-    local now = engine.now()
-    local capacity = MAX_LINK_SPACE
+    local now = C.get_time_ns()
+    local capacity = link.nwritable(output)
 
     while self.queue:size() > 0 and capacity > 0 do
         local buffer = self.queue:look()
