@@ -30,10 +30,7 @@ function TBRateLimiter:new(conf)
     {
         byte_rate = math.floor(conf.rate / 8),
         bucket_capacity = conf.bucket_capacity,
-        contingent = conf.initial_capacity,
-        last_link_empty = true,
-        push_amount = 0,
-        push_interval = 0
+        contingent = conf.initial_capacity
     }
     setmetatable(o, self)
     self.__index = self
@@ -49,39 +46,24 @@ function TBRateLimiter:report()
     print(
         string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets),
             lib.comma_value(output_stats.txbytes)))
-    print(string.format("%20s packets dropped", lib.comma_value(counter.read(self.shm.txdrop))))
-    print(string.format("%20s delay between pushes (%s / %s)", lib.comma_value(self.push_interval / self.push_amount),
-        lib.comma_value(self.push_interval), lib.comma_value(self.push_amount)))
 end
 
 function TBRateLimiter:push()
     local i = assert(self.input.input, "input port not found")
     local o = assert(self.output.output, "output port not found")
 
-    local cur_now = tonumber(engine.now())
-    local last_time = self.last_time or cur_now
-    local interval = cur_now - last_time
-
     if link.empty(i) then
-        if not self.last_link_empty then
-            self.push_amount = self.push_amount + 1
-            self.push_interval = self.push_interval + interval
-        end
-        self.last_link_empty = true
         return
     end
 
+    local cur_now = tonumber(engine.now())
+    local last_time = self.last_time or cur_now
+    local interval = cur_now - last_time
     self.contingent = min(
         self.contingent + self.byte_rate * interval,
         self.bucket_capacity
     )
     self.last_time = cur_now
-
-    if not self.last_link_empty then
-        self.push_amount = self.push_amount + 1
-        self.push_interval = self.push_interval + interval
-    end
-    self.last_link_empty = false
 
     for _ = 1, link.nreadable(i) do
         local p = link.receive(i)
