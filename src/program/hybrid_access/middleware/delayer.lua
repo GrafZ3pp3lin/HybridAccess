@@ -9,6 +9,9 @@ local C = ffi.C
 
 local queue = require("program.hybrid_access.base.queue")
 local base = require("program.hybrid_access.base.base")
+local co = require("program.hybrid_access.base.constants")
+
+local GET_ETHER_TYPE = co.GET_ETHER_TYPE
 
 require("core.packet_h")
 
@@ -75,7 +78,8 @@ function Delayer:push()
         if now >= buf_pkt.release_time then
             --self:send_buffer(buffer, output)
             local p = buf_pkt.packet
-            if p.data + 12 ~= 0x94 or p.data + 13 ~= 0x44 then
+            local eth_type = GET_ETHER_TYPE(p)
+            if eth_type ~= 0x9444 then
                 print(base.pkt_to_str(p))
             end
             link.transmit(output, p)
