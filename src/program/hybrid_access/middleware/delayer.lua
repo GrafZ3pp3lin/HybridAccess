@@ -90,22 +90,15 @@ function Delayer:send_buffer(buffer, output)
     end
 end
 
-function Delayer:file_report(f)
+function Delayer:report()
     local input_stats = link.stats(self.input.input)
     local output_stats = link.stats(self.output.output)
 
-    f:write(
-        string.format("delayed with %ss", lib.comma_value(self.delay)),
-        "\n"
-    )
-    f:write(
-        string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)),
-        "\n")
-    f:write(
-        string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
-        "\n")
-    f:write(
-        string.format("%20s max buffered breaths", lib.comma_value(self.max_buffered)),
-        "\n"
-    )
+    print(string.format("delayed with %ss", lib.comma_value(self.delay)))
+    print(string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets),
+        lib.comma_value(input_stats.txbytes)))
+    print(
+        string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets),
+            lib.comma_value(output_stats.txbytes)))
+    print(string.format("%20s max buffered breaths", lib.comma_value(self.max_buffered)))
 end

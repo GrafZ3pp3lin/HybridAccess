@@ -12,7 +12,7 @@ local min = math.min
 
 TBRateLimiter = {
     config = {
-        -- bytes per second
+        -- bits per second
         rate             = { required = true },
         -- bucket capacity in byte (default 5000)
         bucket_capacity  = { default = 5000 },
@@ -28,7 +28,7 @@ function TBRateLimiter:new(conf)
     conf.initial_capacity = conf.initial_capacity or conf.bucket_capacity
     local o =
     {
-        rate = conf.rate,
+        byte_rate = math.floor(conf.rate / 8),
         bucket_capacity = conf.bucket_capacity,
         contingent = conf.initial_capacity
     }
@@ -37,17 +37,16 @@ function TBRateLimiter:new(conf)
     return o
 end
 
-function TBRateLimiter:file_report(f)
+function TBRateLimiter:report()
     local input_stats = link.stats(self.input.input)
     local output_stats = link.stats(self.output.output)
 
-    f:write(
-        string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)),
-        "\n")
-    f:write(
-        string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)),
-        "\n")
-    f:write(string.format("%20s packets dropped", lib.comma_value(counter.read(self.shm.txdrop))), "\n")
+    print(
+        string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)))
+    print(
+        string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets),
+            lib.comma_value(output_stats.txbytes)))
+    print(string.format("%20s packets dropped", lib.comma_value(counter.read(self.shm.txdrop))))
 end
 
 function TBRateLimiter:push()
@@ -58,7 +57,7 @@ function TBRateLimiter:push()
         local cur_now = tonumber(engine.now())
         local last_time = self.last_time or cur_now
         self.contingent = min(
-            self.contingent + self.rate * (cur_now - last_time),
+            self.contingent + self.byte_rate * (cur_now - last_time),
             self.bucket_capacity
         )
         self.last_time = cur_now

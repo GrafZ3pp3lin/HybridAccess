@@ -25,42 +25,81 @@ function run(args)
 
     local c = config.new()
 
-    config.app(c, "nic_in", mellanox.ConnectX, { pciaddress = cfg.pci_in, queues = {{ id = "q1" }}})
-    config.app(c, "nic_out1", mellanox.ConnectX, { pciaddress = cfg.pci_out1, queues = {{ id = "q1" }}})
-    config.app(c, "nic_out2", mellanox.ConnectX, { pciaddress = cfg.pci_out2, queues = {{ id = "q1" }}})
+    config.app(c, "nic_in", mellanox.ConnectX, { pciaddress = cfg.input.pci, queues = {{ id = "q1" }}})
+    config.app(c, "nic_out1", mellanox.ConnectX, { pciaddress = cfg.link1.pci, queues = {{ id = "q1" }}})
+    config.app(c, "nic_out2", mellanox.ConnectX, { pciaddress = cfg.link2.pci, queues = {{ id = "q1" }}})
 
-    config.app(c, "link_in", mellanox.IO, { pciaddress = cfg.pci_in, queue = "q1" })
-    config.app(c, "link_out1", mellanox.IO, { pciaddress = cfg.pci_out1, queue = "q1" })
-    config.app(c, "link_out2", mellanox.IO, { pciaddress = cfg.pci_out2, queue = "q1" })
+    config.app(c, "link_in", mellanox.IO, { pciaddress = cfg.input.pci, queue = "q1" })
+    config.app(c, "link_out1", mellanox.IO, { pciaddress = cfg.link1.pci, queue = "q1" })
+    config.app(c, "link_out2", mellanox.IO, { pciaddress = cfg.link2.pci, queue = "q1" })
 
     config.app(c, "loadbalancer", require(cfg.loadbalancer.path)[cfg.loadbalancer.type], cfg.loadbalancer.config)
     config.app(c, "recombination", recombination.Recombination, cfg.recombination.config)
 
-    config.app(c, "forwarder_in", forwarder.MacForwarder, { source_mac = cfg.forwarder_in.src, destination_mac = cfg.forwarder_in.dst })
-    config.app(c, "forwarder_out1", forwarder.MacForwarder, { source_mac = cfg.forwarder_out1.src, destination_mac = cfg.forwarder_out1.dst })
-    config.app(c, "forwarder_out2", forwarder.MacForwarder, { source_mac = cfg.forwarder_out2.src, destination_mac = cfg.forwarder_out2.dst })
+    config.app(c, "forwarder_in", forwarder.MacForwarder, cfg.input.forwarder)
 
-    config.app(c, "rate_limiter_1", rate_limiter.TBRateLimiter, cfg.rate_limiter_1)
-    config.app(c, "rate_limiter_2", rate_limiter.TBRateLimiter, cfg.rate_limiter_2)
-
-    config.app(c, "delayer_1", delayer.Delayer, { delay = cfg.delay_1 })
-    config.app(c, "delayer_2", delayer.Delayer, { delay = cfg.delay_2 })
-
-    -- loadbalancer
-    config.link(c, "link_in.output -> loadbalancer.input")
-    config.link(c, "loadbalancer.output1 -> rate_limiter_1.input")
-    config.link(c, "loadbalancer.output2 -> rate_limiter_2.input")
-    config.link(c, "rate_limiter_1.output -> delayer_1.input")
-    config.link(c, "rate_limiter_2.output -> delayer_2.input")
-    config.link(c, "delayer_1.output -> forwarder_out1.input")
-    config.link(c, "delayer_2.output -> forwarder_out2.input")
-    config.link(c, "forwarder_out1.output -> link_out1.input")
-    config.link(c, "forwarder_out2.output -> link_out2.input")
     -- recombination
     config.link(c, "link_out1.output -> recombination.input1")
     config.link(c, "link_out2.output -> recombination.input2")
     config.link(c, "recombination.output -> forwarder_in.input")
     config.link(c, "forwarder_in.output -> link_in.input")
+
+    -- loadbalancer
+    config.link(c, "link_in.output -> loadbalancer.input")
+
+    local node_out1 = "loadbalancer.output1"
+    local node_out2 = "loadbalancer.output2"
+
+    local pipeline1 = "loadbalancer"
+    local pipeline2 = "loadbalancer"
+
+    if cfg.link1.enable.rate_limiter == true then
+        config.app(c, "rate_limiter_1", rate_limiter.TBRateLimiter, cfg.link1.rate_limiter)
+        config.link(c, node_out1.." -> rate_limiter_1.input")
+        node_out1 = "rate_limiter_1.output"
+        pipeline1 = pipeline1.." -> rate limiter"
+    end
+    if cfg.link2.enable.rate_limiter == true then
+        config.app(c, "rate_limiter_2", rate_limiter.TBRateLimiter, cfg.link2.rate_limiter)
+        config.link(c, node_out2.." -> rate_limiter_2.input")
+        node_out2 = "rate_limiter_2.output"
+        pipeline2 = pipeline2.." -> rate limiter"
+    end
+
+    if cfg.link1.enable.delayer == true then
+        config.app(c, "delayer_1", delayer.Delayer, cfg.link1.delayer)
+        config.link(c, node_out1.." -> delayer_1.input")
+        node_out1 = "delayer_1.output"
+        pipeline1 = pipeline1.." -> delayer"
+    end
+    if cfg.link2.enable.delayer == true then
+        config.app(c, "delayer_2", delayer.Delayer, cfg.link2.delayer)
+        config.link(c, node_out2.." -> delayer_2.input")
+        node_out2 = "delayer_2.output"
+        pipeline2 = pipeline2.." -> delayer"
+    end
+
+    if cfg.link1.enable.forwarder == true then
+        config.app(c, "forwarder_out1", forwarder.MacForwarder, cfg.link1.forwarder)
+        config.link(c, node_out1.." -> forwarder_out1.input")
+        node_out1 = "forwarder_out1.output"
+        pipeline1 = pipeline1.." -> forwarder"
+    end
+    if cfg.link2.enable.forwarder == true then
+        config.app(c, "forwarder_out2", forwarder.MacForwarder, cfg.link2.forwarder)
+        config.link(c, node_out2.." -> forwarder_out2.input")
+        node_out2 = "forwarder_out2.output"
+        pipeline2 = pipeline2.." -> forwarder"
+    end
+    
+    config.link(c, node_out1.." -> link_out1.input")
+    config.link(c, node_out2.." -> link_out2.input")
+
+    pipeline1 = pipeline1.." -> out"
+    pipeline2 = pipeline2.." -> out"
+
+    print("pipeline link 1: ", pipeline1)
+    print("pipeline link 2: ", pipeline2)
 
     local report_timer = nil
     if cfg.report_interval ~= nil then
