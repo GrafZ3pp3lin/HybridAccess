@@ -44,8 +44,8 @@ function Delayer:pull()
     local length = link.nreadable(input)
     if length <= 0 then
         return
-    elseif length > 1 then
-        print("pulled: "..length)
+    -- elseif length > 1 then
+    --     print("pulled: "..length)
     end
 
     local release_time = C.get_time_ns() + self.delay
@@ -72,14 +72,14 @@ function Delayer:push()
 
     local now = C.get_time_ns()
     local limit = engine.pull_npackets - link.nreadable(output)
-    local transmitted = 0
+    -- local transmitted = 0
 
     while self.queue:size() > 0 and limit > 0 do
         local buf_pkt = self.queue:look()
         if buf_pkt.release_time <= now then
             --self:send_buffer(buffer, output)
             limit = limit - 1
-            transmitted = transmitted + 1
+            -- transmitted = transmitted + 1
             local pkt = self.queue:pop()
             link.transmit(output, pkt.packet)
         else
@@ -87,9 +87,9 @@ function Delayer:push()
         end
     end
 
-    if transmitted > 1 then
-        print("pushed: "..transmitted)
-    end
+    -- if transmitted > 1 then
+    --     print("pushed: "..transmitted)
+    -- end
 end
 
 -- function Delayer:send_buffer(buffer, output)
