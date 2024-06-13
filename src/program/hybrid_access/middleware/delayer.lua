@@ -61,8 +61,6 @@ function Delayer:pull()
     if queue_size > self.max_buffered then
         self.max_buffered = queue_size
     end
-
-    print(buffer.release_time, now, length, queue_size)
 end
 
 function Delayer:push()
@@ -79,7 +77,6 @@ function Delayer:push()
         if now >= buffer.release_time and buffer.length <= capacity then
             self:send_buffer(buffer, output)
             local _ = self.queue:pop()
-            print(now, buffer.length, self.queue:size(), capacity)
             capacity = capacity - buffer.length
         else
             break
