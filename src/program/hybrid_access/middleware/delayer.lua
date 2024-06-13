@@ -8,10 +8,7 @@ local link = require("core.link")
 local C = ffi.C
 
 local queue = require("program.hybrid_access.base.queue")
-local base = require("program.hybrid_access.base.base")
-local co = require("program.hybrid_access.base.constants")
-
-local GET_ETHER_TYPE = co.GET_ETHER_TYPE
+-- local base = require("program.hybrid_access.base.base")
 
 require("core.packet_h")
 
@@ -71,20 +68,14 @@ function Delayer:push()
     end
 
     local now = C.get_time_ns()
-    local capacity = link.nwritable(output)
 
-    while self.queue:size() > 0 and capacity > 0 do
+    while self.queue:size() > 0 and link.nwritable(output) > 0 do
         local buf_pkt = self.queue:look()
-        if now >= buf_pkt.release_time then
+        if buf_pkt.release_time <= now then
             --self:send_buffer(buffer, output)
             local p = buf_pkt.packet
-            local eth_type = GET_ETHER_TYPE(p)
-            if eth_type ~= 0x9444 then
-                print(base.pkt_to_str(p))
-            end
             link.transmit(output, p)
             local _ = self.queue:pop()
-            capacity = capacity - 1
         else
             break
         end

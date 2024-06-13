@@ -19,6 +19,7 @@ Recombination.shm = {
     timeout_startet = { counter },
     timeout_reached = { counter },
     drop_seq_no = { counter },
+    missing = { counter }
 }
 
 function Recombination:new(conf)
@@ -46,12 +47,13 @@ function Recombination:report()
 
     print(string.format("%20s # / %20s b in 1", lib.comma_value(in1_stats.txpackets), lib.comma_value(in1_stats.txbytes)))
     print(string.format("%20s # / %20s b in 2", lib.comma_value(in2_stats.txpackets), lib.comma_value(in2_stats.txbytes)))
-    print(string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)))
+    print(string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets),
+        lib.comma_value(output_stats.txbytes)))
     print(string.format("%20s timeout started", lib.comma_value(counter.read(self.shm.timeout_startet))))
     print(string.format("%20s timeout reached", lib.comma_value(counter.read(self.shm.timeout_reached))))
-    print(
-        string.format("%20s dropped packages because of too low seq num",
-            lib.comma_value(counter.read(self.shm.drop_seq_no))))
+    print(string.format("%20s dropped packages because of too low seq num",
+        lib.comma_value(counter.read(self.shm.drop_seq_no))))
+    print(string.format("%20s missing seq nums", lib.comma_value(counter.read(self.shm.missing))))
 end
 
 function Recombination:push()
@@ -110,6 +112,7 @@ function Recombination:process_links(output)
         end
         if buffered_header ~= nil then
             if not empty_link then
+                counter.add(self.shm.missing, buffered_header.seq_no - self.next_pkt_num)
                 self:process_packet(self.input[buffered_input_index], output, buffered_header)
                 self.wait_until = nil
             elseif self.wait_until == nil then
@@ -141,6 +144,7 @@ function Recombination:process_waited(output)
     end
     if buffered_header ~= nil then
         --print("waited for ", buffered_header.seq_no, self.next_pkt_num, buffered_input_index)
+        counter.add(self.shm.missing, buffered_header.seq_no - self.next_pkt_num)
         self:process_packet(self.input[buffered_input_index], output, buffered_header)
     end
 end
