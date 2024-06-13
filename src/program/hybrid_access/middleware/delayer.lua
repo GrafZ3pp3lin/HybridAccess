@@ -12,11 +12,10 @@ local base = require("program.hybrid_access.base.base")
 
 require("core.packet_h")
 
-local link_buffer = ffi.typeof([[
+local buffered_pkt = ffi.typeof([[
     struct {
-        struct packet   *packets[1024];
+        struct packet   *packet;
         uint64_t        release_time;
-        uint32_t        length;
     } __attribute__((packed))
 ]])
 
@@ -46,17 +45,16 @@ function Delayer:pull()
         return
     end
 
-    local buffer = ffi.new(link_buffer)
-    local now = C.get_time_ns()
-    buffer.release_time = now + self.delay
-    buffer.length = length
-
-    for i = 0, length - 1 do
+    local release_time = C.get_time_ns() + self.delay
+    
+    for _ = 1, length do
         local p = link.receive(input)
-        buffer.packets[i] = p
+        local buffer = ffi.new(buffered_pkt)
+        buffer.release_time = release_time
+        buffer.packet = p
+        self.queue:push(buffer)
     end
 
-    self.queue:push(buffer)
     local queue_size = self.queue:size()
     if queue_size > self.max_buffered then
         self.max_buffered = queue_size
@@ -73,23 +71,28 @@ function Delayer:push()
     local capacity = link.nwritable(output)
 
     while self.queue:size() > 0 and capacity > 0 do
-        local buffer = self.queue:look()
-        if now >= buffer.release_time and buffer.length <= capacity then
-            self:send_buffer(buffer, output)
+        local buf_pkt = self.queue:look()
+        if now >= buf_pkt.release_time then
+            --self:send_buffer(buffer, output)
+            local p = buf_pkt.packet
+            if p.data + 12 ~= 0x44 or p.data + 13 ~= 0x94 then
+                print(base.pkt_to_str(p))
+            end
+            link.transmit(output, p)
             local _ = self.queue:pop()
-            capacity = capacity - buffer.length
+            capacity = capacity - 1
         else
             break
         end
     end
 end
 
-function Delayer:send_buffer(buffer, output)
-    for i = 0, buffer.length - 1 do
-        local p = buffer.packets[i]
-        link.transmit(output, p)
-    end
-end
+-- function Delayer:send_buffer(buffer, output)
+--     for i = 0, buffer.length - 1 do
+--         local p = buffer.packets[i]
+--         link.transmit(output, p)
+--     end
+-- end
 
 function Delayer:report()
     local input_stats = link.stats(self.input.input)
