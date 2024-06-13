@@ -4,11 +4,11 @@ module(..., package.seeall)
 local ffi = require("ffi")
 local lib = require("core.lib")
 local link = require("core.link")
-local engine = require("core.app")
 
 local C = ffi.C
 
 local queue = require("program.hybrid_access.base.queue")
+local base = require("program.hybrid_access.base.base")
 
 require("core.packet_h")
 
@@ -47,7 +47,8 @@ function Delayer:pull()
     end
 
     local buffer = ffi.new(link_buffer)
-    buffer.release_time = C.get_time_ns() + self.delay
+    local now = C.get_time_ns()
+    buffer.release_time = now + self.delay
     buffer.length = length
 
     for i = 0, length - 1 do
@@ -61,7 +62,7 @@ function Delayer:pull()
         self.max_buffered = queue_size
     end
 
-    print(string.format("queued packets: %i - release at: %i - new queue size: %i", length, buffer.release_time, queue_size))
+    print(buffer.release_time, now, length, queue_size)
 end
 
 function Delayer:push()
@@ -78,7 +79,7 @@ function Delayer:push()
         if now >= buffer.release_time and buffer.length <= capacity then
             self:send_buffer(buffer, output)
             local _ = self.queue:pop()
-            print(string.format("send packets: %i - now: %i - new queue size: %i - capacity: %i", buffer.length, now, self.queue:size(), capacity))
+            print(now, buffer.length, self.queue:size(), capacity)
             capacity = capacity - buffer.length
         else
             break

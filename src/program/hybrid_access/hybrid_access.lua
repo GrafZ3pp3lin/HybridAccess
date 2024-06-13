@@ -11,6 +11,7 @@ local recombination = require("program.hybrid_access.recombination.recombination
 local forwarder = require("program.hybrid_access.middleware.mac_forwarder")
 local rate_limiter = require("program.hybrid_access.middleware.rate_limiter")
 local delayer = require("program.hybrid_access.middleware.delayer")
+local printer = require("program.hybrid_access.middleware.printer")
 
 local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
@@ -38,17 +39,32 @@ function run(args)
 
     config.app(c, "forwarder_in", forwarder.MacForwarder, cfg.input.forwarder)
 
+    local node_out1 = "link_out1.output"
+    local node_out2 = "link_out2.output"
+
     -- recombination
-    config.link(c, "link_out1.output -> recombination.input1")
-    config.link(c, "link_out2.output -> recombination.input2")
+    if cfg.link1.enable.printer_in == true then
+        config.app(c, "printer_in_1", printer.Printer, cfg.link1.printer_in)
+        config.link(c, node_out1.." -> printer_in_1.input")
+        node_out1 = "printer_in_1.output"
+    end
+    if cfg.link2.enable.printer_in == true then
+        config.app(c, "printer_in_2", printer.Printer, cfg.link2.printer_in)
+        config.link(c, node_out2.." -> printer_in_2.input")
+        node_out2 = "printer_in_2.output"
+    end
+
+    config.link(c, node_out1.." -> recombination.input1")
+    config.link(c, node_out2.." -> recombination.input2")
+
     config.link(c, "recombination.output -> forwarder_in.input")
     config.link(c, "forwarder_in.output -> link_in.input")
 
     -- loadbalancer
     config.link(c, "link_in.output -> loadbalancer.input")
 
-    local node_out1 = "loadbalancer.output1"
-    local node_out2 = "loadbalancer.output2"
+    node_out1 = "loadbalancer.output1"
+    node_out2 = "loadbalancer.output2"
 
     local pipeline1 = "loadbalancer"
     local pipeline2 = "loadbalancer"
@@ -90,6 +106,19 @@ function run(args)
         config.link(c, node_out2.." -> forwarder_out2.input")
         node_out2 = "forwarder_out2.output"
         pipeline2 = pipeline2.." -> forwarder"
+    end
+
+    if cfg.link1.enable.printer_out == true then
+        config.app(c, "printer_out_1", printer.Printer, cfg.link1.printer_out)
+        config.link(c, node_out1.." -> printer_out_1.input")
+        node_out1 = "printer_out_1.output"
+        pipeline1 = pipeline1.." -> printer"
+    end
+    if cfg.link2.enable.printer_out == true then
+        config.app(c, "printer_out_2", printer.Printer, cfg.link2.printer_out)
+        config.link(c, node_out2.." -> printer_out_2.input")
+        node_out2 = "printer_out_2.output"
+        pipeline2 = pipeline2.." -> printer"
     end
     
     config.link(c, node_out1.." -> link_out1.input")
