@@ -87,8 +87,18 @@ function report_nics()
         if name:sub(1, 3) == "nic" then
             print(name .. ":")
             app:sync_stats()
+            local stats = app.stats
+            print(counter.read(stats.rxbytes))
+            print(counter.read(stats.rxpackets))
+            print(counter.read(stats.rxdrop))
+            print(counter.read(stats.rxerrors))
+            print(counter.read(stats.txbytes))
+            print(counter.read(stats.txpackets))
+            print(counter.read(stats.txdrop))
+            print(counter.read(stats.txerrors))
+            print(counter.read(stats.speed))
             -- local stats = app.hca:query_vport_counter()
-            print(dump(app.stats))
+            -- print(dump(app.stats))
         end
     end
 end
