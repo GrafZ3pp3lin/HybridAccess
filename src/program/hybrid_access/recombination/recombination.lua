@@ -120,12 +120,10 @@ function Recombination:process_links(output)
                 counter.add(self.shm.missing, buffered_header.seq_no - self.next_pkt_num)
                 self:process_packet(self.input[buffered_input_index], output, buffered_header)
                 self.wait_until = nil
+            elseif self.wait_until ~= nil then
+                -- we wait already for another packet
+                break
             else
-                if self.wait_until ~= nil then
-                    print(link.empty(self.input[1]), link.empty(self.input[2]), self.wait_until, self.empty_links[1], self.empty_links[2])
-                    self:report()
-                    error("we wait already, can not be overwritten")
-                end
                 local now = engine.now()
                 counter.add(self.shm.timeout_startet)
                 self.wait_until = now + self:estimate_wait_time()
