@@ -140,6 +140,7 @@ function run(args)
                 end
                 if cfg.report_apps then
                     base.report_apps()
+                    base.report_nics()
                 end
             end,
             cfg.report_interval,
