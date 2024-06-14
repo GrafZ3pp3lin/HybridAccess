@@ -87,18 +87,13 @@ function Delayer:push()
         return
     end
 
+    -- send max one buffer
     local now = C.get_time_ns()
-    local sending_done = false
-
-    repeat
-        local peek_buf = self.queue:peek()
-        if peek_buf.release_time <= now and peek_buf.length < link.nwritable(output) then
-            local buffer = self.queue:pop()
-            self:send_buffer(buffer, output)
-        else
-            sending_done = true
-        end
-    until sending_done or self.queue:size() <= 0
+    local peek_buf = self.queue:peek()
+    if peek_buf.release_time <= now and peek_buf.length < link.nwritable(output) then
+        local buffer = self.queue:pop()
+        self:send_buffer(buffer, output)
+    end
 end
 
 function Delayer:send_buffer(buffer, output)
