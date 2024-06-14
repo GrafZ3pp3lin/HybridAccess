@@ -18,6 +18,7 @@ Recombination.config = {
 Recombination.shm = {
     timeout_startet = { counter },
     timeout_reached = { counter },
+    timeout_extend = { counter },
     drop_seq_no = { counter },
     regular_pkts = { counter },
     missing = { counter }
@@ -53,6 +54,7 @@ function Recombination:report()
     print(string.format("%20s regular packets (non hybrid access)", lib.comma_value(counter.read(self.shm.regular_pkts))))
     print(string.format("%20s timeout started", lib.comma_value(counter.read(self.shm.timeout_startet))))
     print(string.format("%20s timeout reached", lib.comma_value(counter.read(self.shm.timeout_reached))))
+    print(string.format("%20s timeout extended", lib.comma_value(counter.read(self.shm.timeout_extend))))
     print(string.format("%20s dropped packages because of too low seq num",
         lib.comma_value(counter.read(self.shm.drop_seq_no))))
     print(string.format("%20s missing seq nums", lib.comma_value(counter.read(self.shm.missing))))
@@ -122,6 +124,7 @@ function Recombination:process_links(output)
                 self.wait_until = nil
             elseif self.wait_until ~= nil then
                 -- we wait already for another packet
+                counter.add(self.shm.timeout_extend)
                 break
             else
                 local now = engine.now()
