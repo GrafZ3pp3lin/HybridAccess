@@ -19,6 +19,7 @@ Recombination.shm = {
     timeout_startet = { counter },
     timeout_reached = { counter },
     drop_seq_no = { counter },
+    regular_pkts = { counter },
     missing = { counter }
 }
 
@@ -49,6 +50,7 @@ function Recombination:report()
     print(string.format("%20s # / %20s b in 2", lib.comma_value(in2_stats.txpackets), lib.comma_value(in2_stats.txbytes)))
     print(string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets),
         lib.comma_value(output_stats.txbytes)))
+    print(string.format("%20s regular packets (non hybrid access)", lib.comma_value(counter.read(self.shm.regular_pkts))))
     print(string.format("%20s timeout started", lib.comma_value(counter.read(self.shm.timeout_startet))))
     print(string.format("%20s timeout reached", lib.comma_value(counter.read(self.shm.timeout_reached))))
     print(string.format("%20s dropped packages because of too low seq num",
@@ -56,7 +58,7 @@ function Recombination:report()
     print(string.format("%20s missing seq nums", lib.comma_value(counter.read(self.shm.missing))))
 end
 
-function Recombination:push()
+function Recombination:pull()
     local process, waited = true, false
 
     if self.wait_until ~= nil then
@@ -100,6 +102,7 @@ function Recombination:process_links(output)
                 self.wait_until = nil
                 break
             elseif ha_header.seq_no < self.next_pkt_num then
+                -- Discard packets with a smaller sequence number than expected
                 counter.add(self.shm.drop_seq_no)
                 local p_real = link.receive(self.input[i])
                 packet.free(p_real)
@@ -115,7 +118,8 @@ function Recombination:process_links(output)
                 counter.add(self.shm.missing, buffered_header.seq_no - self.next_pkt_num)
                 self:process_packet(self.input[buffered_input_index], output, buffered_header)
                 self.wait_until = nil
-            elseif self.wait_until == nil then
+            else
+                assert(self.wait_until == nil, "we wait already, can not be overwritten")
                 local now = engine.now()
                 counter.add(self.shm.timeout_startet)
                 self.wait_until = now + self:estimate_wait_time()
@@ -143,9 +147,10 @@ function Recombination:process_waited(output)
         end
     end
     if buffered_header ~= nil then
-        --print("waited for ", buffered_header.seq_no, self.next_pkt_num, buffered_input_index)
         counter.add(self.shm.missing, buffered_header.seq_no - self.next_pkt_num)
         self:process_packet(self.input[buffered_input_index], output, buffered_header)
+    else
+        print("waited for timeout and no packet found")
     end
 end
 
@@ -210,6 +215,7 @@ function Recombination:read_next_hybrid_access_pkt(input, output)
     local p = link.front(input)
     local ha_header = self.hybrid_access:get_header(p)
     while ha_header == nil do
+        counter.add(self.shm.regular_pkts)
         -- just forward non hybrid packets
         local p_real = link.receive(input)
         link.transmit(output, p_real)

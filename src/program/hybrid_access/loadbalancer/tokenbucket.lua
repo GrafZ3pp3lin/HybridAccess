@@ -40,7 +40,7 @@ function TokenBucket:push()
         self.last_time = cur_now
     end
 
-    while not link.empty(i) do
+    for _ = 1, link.nreadable(i) do
         self:process_packet(i, o1, o2)
     end
 end

@@ -24,7 +24,7 @@ function RoundRobin:push()
     local o1 = assert(self.output.output1, "output port 1 not found")
     local o2 = assert(self.output.output2, "output port 2 not found")
 
-    while not link.empty(i) do
+    for _ = 1, link.nreadable(i) do
         self:process_packet(i, o1, o2)
     end
 end
