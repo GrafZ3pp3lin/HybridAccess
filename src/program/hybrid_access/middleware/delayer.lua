@@ -98,7 +98,7 @@ function Delayer:push()
         else
             sending_done = true
         end
-    until sending_done
+    until sending_done or self.queue:size() <= 0
 end
 
 function Delayer:send_buffer(buffer, output)
