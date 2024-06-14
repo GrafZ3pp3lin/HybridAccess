@@ -42,9 +42,9 @@ function StatsCounter:push()
 
     local nRead = link.nreadable(input)
     local nWrite = link.nwritable(output)
-    local overflow = nWrite - nRead
+    local overflow = nRead - nWrite
 
-    if overflow then
+    if overflow > 0 then
         counter.add(self.shm.txdrop, 1)
         counter.add(self.shm.txdrop_packets, overflow)
     end
