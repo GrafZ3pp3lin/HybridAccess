@@ -42,7 +42,7 @@ function StatsCounter:push()
 
     local nRead = link.nreadable(input)
     local nWrite = link.nwritable(output)
-    local overflow = nRead - nWrite
+    local overflow = nWrite - nRead
 
     if overflow then
         counter.add(self.shm.txdrop, 1)
