@@ -12,17 +12,21 @@ local forwarder = require("program.hybrid_access.middleware.mac_forwarder")
 local rate_limiter = require("program.hybrid_access.middleware.rate_limiter")
 local delayer = require("program.hybrid_access.middleware.delayer")
 local printer = require("program.hybrid_access.middleware.printer")
+local stats_counter = require("program.hybrid_access.middleware.stats_counter")
 
 local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
 
 function run(args)
-    local path = "/home/student/snabb/src/program/hybrid_access/config.ini"
-    if #args == 1 then
+    local path
+    if #args ~= 1 then
+        error("please provide config path")
         path = args[1]
     end
-
+    
     local cfg = ini.Ini:parse(path)
+    -- local middleware = "./program/hybrid_access/middleware.ini"
+    -- local middleware = ini.Ini:parse(middleware)
 
     local c = config.new()
 
@@ -52,6 +56,17 @@ function run(args)
         config.app(c, "printer_in_2", printer.Printer, cfg.link2.printer_in)
         config.link(c, node_out2.." -> printer_in_2.input")
         node_out2 = "printer_in_2.output"
+    end
+
+    if cfg.link1.enable.stats_counter == true then
+        config.app(c, "stats_counter_1", stats_counter.StatsCounter, cfg.link1.stats_counter)
+        config.link(c, node_out1.." -> stats_counter_1.input")
+        node_out1 = "stats_counter_1.output"
+    end
+    if cfg.link2.enable.stats_counter == true then
+        config.app(c, "stats_counter_2", stats_counter.StatsCounter, cfg.link2.stats_counter)
+        config.link(c, node_out2.." -> stats_counter_2.input")
+        node_out2 = "stats_counter_2.output"
     end
 
     config.link(c, node_out1.." -> recombination.input1")
