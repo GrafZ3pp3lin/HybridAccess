@@ -16,7 +16,7 @@ function Queue:size()
     return self.write - self.read
 end
 
-function Queue:look()
+function Queue:peek()
     local read = self.read
     if read >= self.write then
         error("queue is empty")

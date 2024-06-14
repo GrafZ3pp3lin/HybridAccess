@@ -69,19 +69,6 @@ function run(args)
     local pipeline1 = "loadbalancer"
     local pipeline2 = "loadbalancer"
 
-    if cfg.link1.enable.delayer == true then
-        config.app(c, "delayer_1", delayer.Delayer, cfg.link1.delayer)
-        config.link(c, node_out1.." -> delayer_1.input")
-        node_out1 = "delayer_1.output"
-        pipeline1 = pipeline1.." -> delayer"
-    end
-    if cfg.link2.enable.delayer == true then
-        config.app(c, "delayer_2", delayer.Delayer, cfg.link2.delayer)
-        config.link(c, node_out2.." -> delayer_2.input")
-        node_out2 = "delayer_2.output"
-        pipeline2 = pipeline2.." -> delayer"
-    end
-
     if cfg.link1.enable.rate_limiter == true then
         config.app(c, "rate_limiter_1", rate_limiter.TBRateLimiter, cfg.link1.rate_limiter)
         config.link(c, node_out1.." -> rate_limiter_1.input")
@@ -93,6 +80,19 @@ function run(args)
         config.link(c, node_out2.." -> rate_limiter_2.input")
         node_out2 = "rate_limiter_2.output"
         pipeline2 = pipeline2.." -> rate limiter"
+    end
+
+    if cfg.link1.enable.delayer == true then
+        config.app(c, "delayer_1", delayer.Delayer, cfg.link1.delayer)
+        config.link(c, node_out1.." -> delayer_1.input")
+        node_out1 = "delayer_1.output"
+        pipeline1 = pipeline1.." -> delayer"
+    end
+    if cfg.link2.enable.delayer == true then
+        config.app(c, "delayer_2", delayer.Delayer, cfg.link2.delayer)
+        config.link(c, node_out2.." -> delayer_2.input")
+        node_out2 = "delayer_2.output"
+        pipeline2 = pipeline2.." -> delayer"
     end
 
     if cfg.link1.enable.forwarder == true then

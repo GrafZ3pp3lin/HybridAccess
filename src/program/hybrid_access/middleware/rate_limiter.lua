@@ -17,7 +17,9 @@ TBRateLimiter = {
         -- bucket capacity in byte (default 5000)
         bucket_capacity  = { default = 5000 },
         -- initial capacity in bucket (eg 3000)
-        initial_capacity = { required = false }
+        initial_capacity = { required = false },
+        -- take preamble, start frame delimiter and ipg into account
+        respect_layer1_overhead = { default = false }
     },
     shm = {
         txdrop = { counter }
@@ -30,8 +32,12 @@ function TBRateLimiter:new(conf)
     {
         byte_rate = math.floor(conf.rate / 8),
         bucket_capacity = conf.bucket_capacity,
-        contingent = conf.initial_capacity
+        contingent = conf.initial_capacity,
+        additional_overhead = 0
     }
+    if conf.respect_layer1_overhead == true then
+        o.additional_overhead = 7 + 1 + 12
+    end
     setmetatable(o, self)
     self.__index = self
     return o
@@ -67,7 +73,7 @@ function TBRateLimiter:push()
 
     for _ = 1, link.nreadable(i) do
         local p = link.receive(i)
-        local length = p.length
+        local length = p.length + self.additional_overhead
 
         if length <= self.contingent then
             self.contingent = self.contingent - length
