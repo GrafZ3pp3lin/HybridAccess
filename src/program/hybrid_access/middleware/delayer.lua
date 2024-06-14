@@ -108,9 +108,9 @@ function Delayer:report()
     local input_stats = link.stats(self.input.input)
     local output_stats = link.stats(self.output.output)
 
-    print(string.format("delayed by %sms", lib.comma_value(self.orig_delay)))
-    print(string.format("corrected by %sns", lib.comma_value(self.orig_correction)))
-    print(string.format("results in delay by %sns", lib.comma_value(self.delay)))
+    print(string.format("%20s ms delay", lib.comma_value(self.orig_delay)))
+    print(string.format("%20s ns corrected", lib.comma_value(self.orig_correction)))
+    print(string.format("%20s ns actual delay", lib.comma_value(self.delay)))
     print(string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets),
         lib.comma_value(input_stats.txbytes)))
     print(

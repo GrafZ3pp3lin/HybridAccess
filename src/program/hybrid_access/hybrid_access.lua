@@ -135,7 +135,12 @@ function run(args)
         report_timer = timer.new(
             "report",
             function ()
-                engine.report({ showload = cfg.report_load, showlinks = cfg.report_links, showapps = cfg.report_apps })
+                if cfg.report_links then
+                    base.report_links()
+                end
+                if cfg.report_apps then
+                    base.report_apps()
+                end
             end,
             cfg.report_interval,
             'repeating'
