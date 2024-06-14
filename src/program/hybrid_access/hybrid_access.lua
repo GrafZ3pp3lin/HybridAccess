@@ -18,12 +18,11 @@ local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
 
 function run(args)
-    local path
     if #args ~= 1 then
         error("please provide config path")
-        path = args[1]
     end
     
+    local path = args[1]
     local cfg = ini.Ini:parse(path)
     -- local middleware = "./program/hybrid_access/middleware.ini"
     -- local middleware = ini.Ini:parse(middleware)
