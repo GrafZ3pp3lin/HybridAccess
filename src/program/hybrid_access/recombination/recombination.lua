@@ -60,7 +60,7 @@ function Recombination:report()
     print(string.format("%20s missing seq nums", lib.comma_value(counter.read(self.shm.missing))))
 end
 
-function Recombination:pull()
+function Recombination:push()
     local process, waited = true, false
 
     if self.wait_until ~= nil then
@@ -90,10 +90,13 @@ function Recombination:process_links(output)
     local buffered_header = nil
     local empty_link = false
 
+    local limit = engine.pull_npackets
+
     -- while at least one packet exists
-    while not link.empty(self.input[1]) or not link.empty(self.input[2]) do
+    while (not link.empty(self.input[1]) or not link.empty(self.input[2])) and limit > 0 do
         empty_link = false
         buffered_header = nil
+        limit = limit - 1
         -- iterate over all links
         for i = 1, 2, 1 do
             local ha_header = self:read_next_hybrid_access_pkt(self.input[i], output)

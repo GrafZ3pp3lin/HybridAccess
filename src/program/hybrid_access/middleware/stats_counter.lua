@@ -36,7 +36,7 @@ function StatsCounter:report()
     print(string.format("%20s overflows", lib.comma_value(counter.read(self.shm.txdrop))))
 end
 
-function StatsCounter:push()
+function StatsCounter:pull()
     local input = assert(self.input.input, "input port not found")
     local output = assert(self.output.output, "output port not found")
 
