@@ -36,7 +36,7 @@ function TBRateLimiter:new(conf)
         additional_overhead = 0
     }
     if conf.respect_layer1_overhead == true then
-        o.additional_overhead = 7 + 1 + 12
+        o.additional_overhead = 7 + 1 + 4 + 12
     end
     setmetatable(o, self)
     self.__index = self

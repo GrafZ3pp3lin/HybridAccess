@@ -8,13 +8,13 @@ local link = require("core.link")
 local queue = require("program.hybrid_access.base.queue")
 
 local C = ffi.C
-local BUFFER_LENGTH = 64
+-- local BUFFER_LENGTH = 64
 
 require("core.packet_h")
 
 local buffered_pkts = ffi.typeof([[
     struct {
-        struct packet   *packets[64];
+        struct packet   *packets[1024];
         uint64_t        release_time;
         uint16_t        length;
     } __attribute__((packed))
@@ -51,19 +51,29 @@ function Delayer:pull()
     end
 
     local release_time = C.get_time_ns() + self.delay
-    local buffered = 0
-    while buffered < length do
-        local buffer = ffi.new(buffered_pkts)
-        local buffer_length = math.min(length - buffered, BUFFER_LENGTH)
-        buffer.release_time = release_time
-        buffer.length = buffer_length
-        for i = 0, buffer_length - 1 do
-            local p = link.receive(input)
-            buffer.packets[i] = p
-        end
-        self.queue:push(buffer)
-        buffered = buffered + buffer_length
+
+    local buffer = ffi.new(buffered_pkts)
+    buffer.release_time = release_time
+    buffer.length = length
+    for i = 0, length - 1 do
+        local p = link.receive(input)
+        buffer.packets[i] = p
     end
+    self.queue:push(buffer)
+
+    -- local buffered = 0
+    -- while buffered < length do
+    --     local buffer = ffi.new(buffered_pkts)
+    --     local buffer_length = math.min(length - buffered, BUFFER_LENGTH)
+    --     buffer.release_time = release_time
+    --     buffer.length = buffer_length
+    --     for i = 0, buffer_length - 1 do
+    --         local p = link.receive(input)
+    --         buffer.packets[i] = p
+    --     end
+    --     self.queue:push(buffer)
+    --     buffered = buffered + buffer_length
+    -- end
 
     local queue_size = self.queue:size()
     if queue_size > self.max_buffered then
