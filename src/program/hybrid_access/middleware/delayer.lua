@@ -88,16 +88,17 @@ function Delayer:push()
     end
 
     local now = C.get_time_ns()
-    local peek_buf = self.queue:peek()
+    local sending_done = false
 
-    while peek_buf.release_time <= now and peek_buf.length < link.nwritable(output) do
-        local buffer = self.queue:pop()
-        self:send_buffer(buffer, output)
-        if self.queue:size() <= 0 then
-            break
+    repeat
+        local peek_buf = self.queue:peek()
+        if peek_buf.release_time <= now and peek_buf.length < link.nwritable(output) then
+            local buffer = self.queue:pop()
+            self:send_buffer(buffer, output)
+        else
+            sending_done = true
         end
-        peek_buf = self.queue:peek()
-    end
+    until sending_done
 end
 
 function Delayer:send_buffer(buffer, output)
@@ -121,4 +122,6 @@ function Delayer:report()
         string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets),
             lib.comma_value(output_stats.txbytes)))
     print(string.format("%20s max buffered", lib.comma_value(self.max_buffered)))
+
+    self.max_buffered = 0
 end
