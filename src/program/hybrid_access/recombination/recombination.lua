@@ -88,16 +88,18 @@ function Recombination:process_links(output)
     local buffered_header = nil
     local empty_link = false
 
+    -- while at least one packet exists
     while not link.empty(self.input[1]) or not link.empty(self.input[2]) do
         empty_link = false
         buffered_header = nil
+        -- iterate over all links
         for i = 1, 2, 1 do
             local ha_header = self:read_next_hybrid_access_pkt(self.input[i], output)
             if ha_header == nil then
-                -- found no packet on that link
+                -- found no hybrid access packet on that link
                 empty_link = true
             elseif ha_header.seq_no == self.next_pkt_num then
-                -- found next packet
+                -- found expected packet
                 self:process_packet(self.input[i], output, ha_header)
                 self.wait_until = nil
                 break
@@ -119,7 +121,11 @@ function Recombination:process_links(output)
                 self:process_packet(self.input[buffered_input_index], output, buffered_header)
                 self.wait_until = nil
             else
-                assert(self.wait_until == nil, "we wait already, can not be overwritten")
+                if self.wait_until ~= nil then
+                    print(link.empty(self.input[1]), link.empty(self.input[2]), self.wait_until, self.empty_links[1], self.empty_links[2])
+                    self:report()
+                    error("we wait already, can not be overwritten")
+                end
                 local now = engine.now()
                 counter.add(self.shm.timeout_startet)
                 self.wait_until = now + self:estimate_wait_time()
