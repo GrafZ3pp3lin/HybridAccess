@@ -45,55 +45,21 @@ function run(args)
     local node_out1 = "link_out1.output"
     local node_out2 = "link_out2.output"
 
+    local pipeline1 = "in"
+    local pipeline2 = "in"
+
     -- recombination
     if cfg.link1.enable.printer_in == true then
         config.app(c, "printer_in_1", printer.Printer, cfg.link1.printer_in)
         config.link(c, node_out1.." -> printer_in_1.input")
         node_out1 = "printer_in_1.output"
+        pipeline1 = pipeline1.." -> printer"
     end
     if cfg.link2.enable.printer_in == true then
         config.app(c, "printer_in_2", printer.Printer, cfg.link2.printer_in)
         config.link(c, node_out2.." -> printer_in_2.input")
         node_out2 = "printer_in_2.output"
-    end
-
-    if cfg.link1.enable.stats_counter == true then
-        config.app(c, "stats_counter_1", stats_counter.StatsCounter, cfg.link1.stats_counter)
-        config.link(c, node_out1.." -> stats_counter_1.input")
-        node_out1 = "stats_counter_1.output"
-    end
-    if cfg.link2.enable.stats_counter == true then
-        config.app(c, "stats_counter_2", stats_counter.StatsCounter, cfg.link2.stats_counter)
-        config.link(c, node_out2.." -> stats_counter_2.input")
-        node_out2 = "stats_counter_2.output"
-    end
-
-    config.link(c, node_out1.." -> recombination.input1")
-    config.link(c, node_out2.." -> recombination.input2")
-
-    config.link(c, "recombination.output -> forwarder_in.input")
-    config.link(c, "forwarder_in.output -> link_in.input")
-
-    -- loadbalancer
-    config.link(c, "link_in.output -> loadbalancer.input")
-
-    node_out1 = "loadbalancer.output1"
-    node_out2 = "loadbalancer.output2"
-
-    local pipeline1 = "loadbalancer"
-    local pipeline2 = "loadbalancer"
-
-    if cfg.link1.enable.rate_limiter == true then
-        config.app(c, "rate_limiter_1", rate_limiter.TBRateLimiter, cfg.link1.rate_limiter)
-        config.link(c, node_out1.." -> rate_limiter_1.input")
-        node_out1 = "rate_limiter_1.output"
-        pipeline1 = pipeline1.." -> rate limiter"
-    end
-    if cfg.link2.enable.rate_limiter == true then
-        config.app(c, "rate_limiter_2", rate_limiter.TBRateLimiter, cfg.link2.rate_limiter)
-        config.link(c, node_out2.." -> rate_limiter_2.input")
-        node_out2 = "rate_limiter_2.output"
-        pipeline2 = pipeline2.." -> rate limiter"
+        pipeline2 = pipeline2.." -> printer"
     end
 
     if cfg.link1.enable.delayer == true then
@@ -107,6 +73,39 @@ function run(args)
         config.link(c, node_out2.." -> delayer_2.input")
         node_out2 = "delayer_2.output"
         pipeline2 = pipeline2.." -> delayer"
+    end
+
+    config.link(c, node_out1.." -> recombination.input1")
+    config.link(c, node_out2.." -> recombination.input2")
+
+    config.link(c, "recombination.output -> forwarder_in.input")
+    config.link(c, "forwarder_in.output -> link_in.input")
+    
+    pipeline1 = pipeline1.." -> recombination"
+    pipeline2 = pipeline2.." -> recombination"
+    print("pipeline link 1: ", pipeline1)
+    print("pipeline link 2: ", pipeline2)
+
+    -- loadbalancer
+    config.link(c, "link_in.output -> loadbalancer.input")
+
+    node_out1 = "loadbalancer.output1"
+    node_out2 = "loadbalancer.output2"
+
+    pipeline1 = "loadbalancer"
+    pipeline2 = "loadbalancer"
+
+    if cfg.link1.enable.rate_limiter == true then
+        config.app(c, "rate_limiter_1", rate_limiter.TBRateLimiter, cfg.link1.rate_limiter)
+        config.link(c, node_out1.." -> rate_limiter_1.input")
+        node_out1 = "rate_limiter_1.output"
+        pipeline1 = pipeline1.." -> rate limiter"
+    end
+    if cfg.link2.enable.rate_limiter == true then
+        config.app(c, "rate_limiter_2", rate_limiter.TBRateLimiter, cfg.link2.rate_limiter)
+        config.link(c, node_out2.." -> rate_limiter_2.input")
+        node_out2 = "rate_limiter_2.output"
+        pipeline2 = pipeline2.." -> rate limiter"
     end
 
     if cfg.link1.enable.forwarder == true then
