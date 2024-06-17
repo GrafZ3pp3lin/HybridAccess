@@ -29,6 +29,7 @@ function Recombination:new(conf)
     local o = {
         next_pkt_num = ffi.new("uint64_t", 0),
         link_delays = conf.link_delays,
+        pull_npackets = conf.pull_npackets,
         wait_until = nil
     }
     if conf.mode == "IP" then
