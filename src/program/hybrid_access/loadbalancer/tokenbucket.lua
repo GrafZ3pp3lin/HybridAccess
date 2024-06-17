@@ -33,16 +33,35 @@ function TokenBucket:push()
     local o1 = assert(self.output.output1, "output port 1 not found")
     local o2 = assert(self.output.output2, "output port 2 not found")
 
+    if link.empty(i) then
+        return
+    end
+
     local cur_now = tonumber(engine.now())
     local last_time = self.last_time or cur_now
+    local interval = cur_now - last_time
     self.contingent = min(
-        self.contingent + self.byte_rate * (cur_now - last_time),
+        self.contingent + self.byte_rate * interval,
         self.capacity
     )
     self.last_time = cur_now
 
     for _ = 1, link.nreadable(i) do
-        self:process_packet(i, o1, o2)
+        local p = link.receive(i)
+        local length = p.length + self.additional_overhead
+
+        if length <= self.contingent then
+            self.contingent = self.contingent - length
+            self:send_pkt(p, o1)
+        else
+            self:send_pkt(p, o2)
+            break
+        end
+    end
+    for _ = 1, link.nreadable(i) do
+        -- send rest of packages to output 2
+        local p = link.receive(i)
+        self:send_pkt(p, o2)
     end
 end
 

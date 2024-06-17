@@ -81,6 +81,13 @@ function TBRateLimiter:push()
             -- discard packet
             counter.add(self.shm.txdrop)
             packet.free(p)
+            break
         end
+    end
+    for _ = 1, link.nreadable(i) do
+        -- discard rest of packages
+        local p = link.receive(i)
+        counter.add(self.shm.txdrop)
+        packet.free(p)
     end
 end
