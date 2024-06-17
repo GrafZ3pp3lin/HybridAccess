@@ -16,7 +16,7 @@ TokenBucket.config = {
 function TokenBucket:new(conf)
     local o = {
         primary = conf.primary,
-        rate = conf.rate,
+        byte_rate = math.floor(conf.rate / 8),
         capacity = conf.capacity,
         contingent = conf.capacity,
         class_type = "TokenBucket"
@@ -36,7 +36,7 @@ function TokenBucket:push()
     local cur_now = tonumber(engine.now())
     local last_time = self.last_time or cur_now
     self.contingent = min(
-        self.contingent + self.rate * (cur_now - last_time),
+        self.contingent + self.byte_rate * (cur_now - last_time),
         self.capacity
     )
     self.last_time = cur_now
