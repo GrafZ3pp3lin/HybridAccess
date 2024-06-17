@@ -224,16 +224,18 @@ function Recombination:read_next_hybrid_access_pkt(input, output)
     end
     local p = link.front(input)
     local ha_header = self.hybrid_access:get_header(p)
-    while ha_header == nil do
-        counter.add(self.shm.regular_pkts)
-        -- just forward non hybrid packets
-        local p_real = link.receive(input)
-        link.transmit(output, p_real)
-        if link.empty(input) then
-            break
-        end
-        p = link.front(input)
-        ha_header = self.hybrid_access:get_header(p)
+    if ha_header == nil then
+        repeat
+            counter.add(self.shm.regular_pkts)
+            -- just forward non hybrid packets
+            local p_real = link.receive(input)
+            link.transmit(output, p_real)
+            if link.empty(input) then
+                break
+            end
+            p = link.front(input)
+            ha_header = self.hybrid_access:get_header(p)
+        until ha_header ~= nil
     end
     return ha_header
 end
