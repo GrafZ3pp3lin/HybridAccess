@@ -30,7 +30,9 @@ function Recombination:new(conf)
         next_pkt_num = ffi.new("uint64_t", 0),
         link_delays = conf.link_delays,
         pull_npackets = conf.pull_npackets,
-        wait_until = nil
+        wait_until = nil,
+        messages = {},
+        message_idx = 1
     }
     if conf.mode == "IP" then
         print("Recombination in ip mode")
@@ -60,6 +62,9 @@ function Recombination:report()
     print(string.format("%20s dropped packages because of too low seq num",
         lib.comma_value(counter.read(self.shm.drop_seq_no))))
     print(string.format("%20s missing seq nums", lib.comma_value(counter.read(self.shm.missing))))
+    for _, msg in ipairs(self.messages) do
+        print(msg)
+    end
 end
 
 function Recombination:push()
@@ -124,6 +129,7 @@ function Recombination:process_links(output)
         end
         if buffered_header ~= nil then
             if not empty_link then
+                self.messages[self.message_idx] = string.format("last seqno %i, take %i", self.next_pkt_num, buffered_header.seq_no)
                 counter.add(self.shm.missing, buffered_header.seq_no - self.next_pkt_num)
                 self:process_packet(self.input[buffered_input_index], output, buffered_header)
                 self.wait_until = nil
@@ -157,6 +163,7 @@ function Recombination:process_waited(output)
         end
     end
     if buffered_header ~= nil then
+        self.messages[self.message_idx] = string.format("waited: last seqno %i, take %i", self.next_pkt_num, buffered_header.seq_no)
         counter.add(self.shm.missing, buffered_header.seq_no - self.next_pkt_num)
         self:process_packet(self.input[buffered_input_index], output, buffered_header)
     else
