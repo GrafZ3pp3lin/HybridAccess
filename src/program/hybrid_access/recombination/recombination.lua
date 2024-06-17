@@ -13,6 +13,7 @@ local HYBRID_ACCESS_TYPE = co.HYBRID_ACCESS_TYPE
 Recombination = {}
 Recombination.config = {
     link_delays = { required = true },
+    pull_npackets = { default = 64 },
     mode = { required = false }
 }
 Recombination.shm = {
@@ -86,11 +87,11 @@ end
 ---If there is an empty link, start a timer to wait for the expected packet.
 ---@param output any output link
 function Recombination:process_links(output)
-    local buffered_input_index
+    local buffered_input_index = 0
     local buffered_header = nil
     local empty_link = false
 
-    local limit = engine.pull_npackets
+    local limit = self.pull_npackets
 
     -- while at least one packet exists
     while (not link.empty(self.input[1]) or not link.empty(self.input[2])) and limit > 0 do
@@ -144,16 +145,14 @@ end
 ---Choose the one with the lowest sequence number.
 ---@param output any output link
 function Recombination:process_waited(output)
-    local buffered_input_index
+    local buffered_input_index = 0
     local buffered_header = nil
 
     for i = 1, 2, 1 do
-        if not link.empty(self.input[i]) then
-            local ha_header = self:read_next_hybrid_access_pkt(self.input[i], output)
-            if ha_header ~= nil and (buffered_header == nil or ha_header.seq_no < buffered_header.seq_no) then
-                buffered_input_index = i
-                buffered_header = ha_header
-            end
+        local ha_header = self:read_next_hybrid_access_pkt(self.input[i], output)
+        if ha_header ~= nil and (buffered_header == nil or ha_header.seq_no < buffered_header.seq_no) then
+            buffered_input_index = i
+            buffered_header = ha_header
         end
     end
     if buffered_header ~= nil then
