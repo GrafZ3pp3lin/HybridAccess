@@ -64,11 +64,11 @@ function Recombination:report()
     print(string.format("%20s dropped packages because of too low seq num",
         lib.comma_value(counter.read(self.shm.drop_seq_no))))
     print(string.format("%20s missing seq nums", lib.comma_value(counter.read(self.shm.missing))))
-    for i, msg in ipairs(self.messages) do
-        print(msg)
-        self.messages[i] = nil
-    end
-    self.message_idx = 1
+    -- for i, msg in ipairs(self.messages) do
+    --     print(msg)
+    --     self.messages[i] = nil
+    -- end
+    -- self.message_idx = 1
 end
 
 function Recombination:push()
@@ -135,8 +135,8 @@ function Recombination:process_links(output)
         end
         if buffered_header ~= nil then
             if not empty_link then
-                self.messages[self.message_idx] = string.format("last seqno %i, take %i", self.next_pkt_num, buffered_header.seq_no)
-                self.message_idx = self.message_idx + 1
+                -- self.messages[self.message_idx] = string.format("last seqno %i, take %i", self.next_pkt_num, buffered_header.seq_no)
+                -- self.message_idx = self.message_idx + 1
                 counter.add(self.shm.missing, buffered_header.seq_no - self.next_pkt_num)
                 self:process_packet(self.input[buffered_input_index], output, buffered_header)
                 self.wait_until = nil
@@ -170,8 +170,8 @@ function Recombination:process_waited(output)
         end
     end
     if buffered_header ~= nil then
-        self.messages[self.message_idx] = string.format("waited: last seqno %i, take %i", self.next_pkt_num, buffered_header.seq_no)
-        self.message_idx = self.message_idx + 1
+        -- self.messages[self.message_idx] = string.format("waited: last seqno %i, take %i", self.next_pkt_num, buffered_header.seq_no)
+        -- self.message_idx = self.message_idx + 1
         counter.add(self.shm.missing, buffered_header.seq_no - self.next_pkt_num)
         self:process_packet(self.input[buffered_input_index], output, buffered_header)
     else
