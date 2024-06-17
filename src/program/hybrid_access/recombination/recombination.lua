@@ -22,7 +22,8 @@ Recombination.shm = {
     timeout_extend = { counter },
     drop_seq_no = { counter },
     regular_pkts = { counter },
-    missing = { counter }
+    missing = { counter },
+    tx_no_transmit = { counter }
 }
 
 function Recombination:new(conf)
@@ -59,6 +60,7 @@ function Recombination:report()
     print(string.format("%20s timeout started", lib.comma_value(counter.read(self.shm.timeout_startet))))
     print(string.format("%20s timeout reached", lib.comma_value(counter.read(self.shm.timeout_reached))))
     print(string.format("%20s timeout extended", lib.comma_value(counter.read(self.shm.timeout_extend))))
+    print(string.format("%20s not transmitted packet", lib.comma_value(counter.read(self.shm.tx_no_transmit))))
     print(string.format("%20s dropped packages because of too low seq num",
         lib.comma_value(counter.read(self.shm.drop_seq_no))))
     print(string.format("%20s missing seq nums", lib.comma_value(counter.read(self.shm.missing))))
@@ -116,12 +118,14 @@ function Recombination:process_links(output)
                 -- found expected packet
                 self:process_packet(self.input[i], output, ha_header)
                 self.wait_until = nil
+                buffered_header = nil
                 break
             elseif ha_header.seq_no < self.next_pkt_num then
                 -- Discard packets with a smaller sequence number than expected
                 counter.add(self.shm.drop_seq_no)
                 local p_real = link.receive(self.input[i])
                 packet.free(p_real)
+                buffered_header = nil
                 break;
             elseif buffered_header == nil or ha_header.seq_no < buffered_header.seq_no then
                 -- packet has not the next expected sequence number - buffer the number and compare it with the other links
@@ -262,6 +266,7 @@ function Recombination:process_packet(input, output, ha_header)
         p = self.hybrid_access:remove_header(p, ha_header.buf_type) -- DO NOT ACCESS ha_header after this, because memory gets overwritten here
         link.transmit(output, p)
     else
+        counter.add(self.shm.tx_no_transmit)
         packet.free(p)
     end
 end
