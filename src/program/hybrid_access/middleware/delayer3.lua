@@ -6,7 +6,6 @@ local link = require("core.link")
 local timer = require("core.timer")
 
 local BUFFER_LENGTH = 102
-local C, gc, new = ffi.C, ffi.gc, ffi.new
 
 require("core.packet_h")
 
@@ -45,7 +44,7 @@ function Delayer3:push()
         error("[Delayer3] amounts of packets exceed buffer length")
     end
 
-    local buffer = new(pkt_buffer)
+    local buffer = ffi.new(pkt_buffer)
     buffer.length = length
     for i = 0, length - 1 do
         local p = link.receive(iface_in)
@@ -56,7 +55,7 @@ function Delayer3:push()
         for i = 0, buffer.length - 1 do
             link.transmit(iface_out, buffer.packets[i])
         end
-        C.free(gc(buffer, nil)) -- Manually free the memory.
+        ffi.C.free(ffi.gc(buffer, nil)) -- Manually free the memory.
     end
     local t = timer.new("packet_delay", fn, self.delay)
     timer.activate(t)
