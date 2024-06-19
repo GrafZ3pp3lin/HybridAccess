@@ -7,15 +7,17 @@ local link = require("core.link")
 
 local queue = require("program.hybrid_access.base.queue")
 
+local BUFFER_LENGTH = 102
+
 local C = ffi.C
 
 require("core.packet_h")
 
 local buffered_pkts = ffi.typeof([[
     struct {
-        struct packet   *packets[1024];
+        struct packet   *packets[102];
         uint64_t        release_time;
-        uint16_t        length;
+        uint8_t         length;
     } __attribute__((packed))
 ]])
 
@@ -48,6 +50,8 @@ function Delayer:pull()
     local length = link.nreadable(input)
     if length <= 0 then
         return
+    elseif length > BUFFER_LENGTH then
+        error("[Delayer3] amounts of packets exceed buffer length")
     end
 
     local release_time = C.get_time_ns() + self.delay
@@ -60,20 +64,6 @@ function Delayer:pull()
         buffer.packets[i] = p
     end
     self.queue:push(buffer)
-
-    -- local buffered = 0
-    -- while buffered < length do
-    --     local buffer = ffi.new(buffered_pkts)
-    --     local buffer_length = math.min(length - buffered, BUFFER_LENGTH)
-    --     buffer.release_time = release_time
-    --     buffer.length = buffer_length
-    --     for i = 0, buffer_length - 1 do
-    --         local p = link.receive(input)
-    --         buffer.packets[i] = p
-    --     end
-    --     self.queue:push(buffer)
-    --     buffered = buffered + buffer_length
-    -- end
 
     local queue_size = self.queue:size()
     if queue_size > self.max_buffered then
@@ -90,7 +80,6 @@ function Delayer:push()
         return
     end
 
-    -- send max one buffer
     local now = C.get_time_ns()
     local peek_buf = self.queue:peek()
     while peek_buf.release_time <= now do
