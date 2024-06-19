@@ -11,8 +11,8 @@ local recombination = require("program.hybrid_access.recombination.recombination
 local forwarder = require("program.hybrid_access.middleware.mac_forwarder")
 local rate_limiter = require("program.hybrid_access.middleware.rate_limiter")
 local delayer = require("program.hybrid_access.middleware.delayer")
+local delayer2 = require("program.hybrid_access.middleware.delayer2")
 local printer = require("program.hybrid_access.middleware.printer")
-local stats_counter = require("program.hybrid_access.middleware.stats_counter")
 
 local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
@@ -63,13 +63,13 @@ function run(args)
     end
 
     if cfg.link1.enable.delayer == true then
-        config.app(c, "delayer_1", delayer.Delayer, cfg.link1.delayer)
+        config.app(c, "delayer_1", delayer2.Delayer2, cfg.link1.delayer)
         config.link(c, node_out1.." -> delayer_1.input")
         node_out1 = "delayer_1.output"
         pipeline1 = pipeline1.." -> delayer"
     end
     if cfg.link2.enable.delayer == true then
-        config.app(c, "delayer_2", delayer.Delayer, cfg.link2.delayer)
+        config.app(c, "delayer_2", delayer2.Delayer2, cfg.link2.delayer)
         config.link(c, node_out2.." -> delayer_2.input")
         node_out2 = "delayer_2.output"
         pipeline2 = pipeline2.." -> delayer"

@@ -8,7 +8,6 @@ local link = require("core.link")
 local queue = require("program.hybrid_access.base.queue")
 
 local C = ffi.C
--- local BUFFER_LENGTH = 64
 
 require("core.packet_h")
 
@@ -34,6 +33,7 @@ function Delayer:new(conf)
     local o = {
         queue = queue.Queue:new(),
         max_buffered = 0,
+        max_buffer_length = 0,
         orig_delay = conf.delay,
         orig_correction = conf.correction
     }
@@ -79,6 +79,9 @@ function Delayer:pull()
     if queue_size > self.max_buffered then
         self.max_buffered = queue_size
     end
+    if length > self.max_buffer_length then
+        self.max_buffer_length = length
+    end
 end
 
 function Delayer:push()
@@ -90,9 +93,14 @@ function Delayer:push()
     -- send max one buffer
     local now = C.get_time_ns()
     local peek_buf = self.queue:peek()
-    if peek_buf.release_time <= now and peek_buf.length < link.nwritable(output) then
+    while peek_buf <= now do
         local buffer = self.queue:pop()
         self:send_buffer(buffer, output)
+        if self.queue:size() > 0 then
+            peek_buf = self.queue:peek()
+        else
+            break
+        end
     end
 end
 
@@ -117,6 +125,7 @@ function Delayer:report()
         string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets),
             lib.comma_value(output_stats.txbytes)))
     print(string.format("%20s max buffered", lib.comma_value(self.max_buffered)))
+    print(string.format("%20s max buffer length", lib.comma_value(self.max_buffer_length)))
 
     self.max_buffered = 0
 end
