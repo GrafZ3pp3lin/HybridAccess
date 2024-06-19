@@ -13,7 +13,7 @@ local HYBRID_ACCESS_TYPE = co.HYBRID_ACCESS_TYPE
 Recombination = {}
 Recombination.config = {
     link_delays = { required = true },
-    pull_npackets = { default = 64 },
+    pull_npackets = { default = 102 },
     mode = { required = false }
 }
 Recombination.shm = {
