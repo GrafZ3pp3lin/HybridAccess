@@ -9,17 +9,14 @@ Delayer2 = {
         -- delay in ms
         delay = { default = 30 },
         -- correction in ns (actual link delay)
-        correction = { default = 0 },
-        debugging = { default = false }
+        correction = { default = 0 }
     }
 }
 
 function Delayer2:new(conf)
-    if conf.debugging then 
-        print("[Delay1] Init...")
-    end
     local o = {
-        debugging = conf.debugging
+        orig_delay = conf.delay,
+        orig_correction = conf.correction
     }
     o.delay = conf.delay * 1000000 - conf.correction
     setmetatable(o, self)
