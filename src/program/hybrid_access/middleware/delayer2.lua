@@ -21,7 +21,7 @@ function Delayer2:new(conf)
     local o = {
         debugging = conf.debugging
     }
-    o.delay = ffi.new("uint64_t", (conf.delay * 1000000) - conf.correction)
+    o.delay = conf.delay * 1000000 - conf.correction
     setmetatable(o, self)
     self.__index = self
     return o
