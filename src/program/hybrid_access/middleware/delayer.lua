@@ -36,6 +36,7 @@ function Delayer:new(conf)
         queue = queue.Queue:new(),
         max_buffered = 0,
         max_buffer_length = 0,
+        max_output_n = 0,
         orig_delay = conf.delay,
         orig_correction = conf.correction
     }
@@ -91,6 +92,11 @@ function Delayer:push()
             break
         end
     end
+
+    local out_n = link.nreadable(output)
+    if out_n > self.max_output_n then
+        self.max_output_n = out_n
+    end
 end
 
 function Delayer:send_buffer(buffer, output)
@@ -115,6 +121,5 @@ function Delayer:report()
             lib.comma_value(output_stats.txbytes)))
     print(string.format("%20s max buffered", lib.comma_value(self.max_buffered)))
     print(string.format("%20s max buffer length", lib.comma_value(self.max_buffer_length)))
-
-    self.max_buffered = 0
+    print(string.format("%20s max output length", lib.comma_value(self.max_output_n)))
 end
