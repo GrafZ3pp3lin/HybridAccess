@@ -46,13 +46,18 @@ function Delayer:new(conf)
     return o
 end
 
-function Delayer:pull()
+function Delayer:push()
+    self:buffer_input()
+    self:release_buffer()
+end
+
+function Delayer:buffer_input()
     local input = assert(self.input.input, "input port not found")
     local length = link.nreadable(input)
     if length <= 0 then
         return
     elseif length > BUFFER_LENGTH then
-        error("[Delayer3] amounts of packets exceed buffer length")
+        error("amounts of packets exceed buffer length")
     end
 
     local release_time = C.get_time_ns() + self.delay
@@ -75,7 +80,7 @@ function Delayer:pull()
     end
 end
 
-function Delayer:push()
+function Delayer:release_buffer()
     local output = assert(self.output.output, "output port not found")
     if self.queue:size() <= 0 then
         return
@@ -122,4 +127,8 @@ function Delayer:report()
     print(string.format("%20s max buffered", lib.comma_value(self.max_buffered)))
     print(string.format("%20s max buffer length", lib.comma_value(self.max_buffer_length)))
     print(string.format("%20s max output length", lib.comma_value(self.max_output_n)))
+
+    self.max_buffered = 0
+    self.max_buffer_length = 0
+    self.max_output_n = 0
 end
