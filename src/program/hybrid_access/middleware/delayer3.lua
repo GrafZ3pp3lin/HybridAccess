@@ -55,7 +55,6 @@ function Delayer3:push()
         for i = 0, buffer.length - 1 do
             link.transmit(iface_out, buffer.packets[i])
         end
-        ffi.C.free(ffi.gc(buffer, nil)) -- Manually free the memory.
     end
     local t = timer.new("packet_delay", fn, self.delay)
     timer.activate(t)
