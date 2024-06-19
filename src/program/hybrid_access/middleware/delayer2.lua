@@ -26,14 +26,14 @@ end
 
 function Delayer2:push()
     local iface_in = assert(self.input.input, "[Delay1] <input> (Input) not found")
-
-    while not link.empty(iface_in) do
+    local length = link.nreadable(iface_in)
+    for _ = 1, length do
         self:process_packet(iface_in)
     end
 end
 
 function Delayer2:process_packet(iface_in)
-    local iface_out = assert(self.output.output, "[Delay1] <output> (Output) not found")
+    local iface_out = self.output.output
     local pkt = link.receive(iface_in)
 
     local fn = function () link.transmit(iface_out, pkt) end
