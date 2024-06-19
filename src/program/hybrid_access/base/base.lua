@@ -74,7 +74,7 @@ end
 function report_apps()
     print("apps report:")
     for name, app in pairs(engine.app_table) do
-        if app.report ~= nil and name:sub(1, 3) ~= "nic" then
+        if app.report ~= nil then --and name:sub(1, 3) ~= "nic" 
             print(name .. ":")
             app:report()
         end
