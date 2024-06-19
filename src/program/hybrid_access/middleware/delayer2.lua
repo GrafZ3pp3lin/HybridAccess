@@ -1,8 +1,8 @@
 module(..., package.seeall)
 
-local ffi = require("ffi")
 local link = require("core.link")
 local timer = require("core.timer")
+local lib = require("core.lib")
 
 Delayer2 = {
     config = {
@@ -43,4 +43,18 @@ function Delayer2:process_packet(iface_in)
 
     local t = timer.new("packet_delay", fn, self.delay)
     timer.activate(t)
+end
+
+function Delayer2:report()
+    local input_stats = link.stats(self.input.input)
+    local output_stats = link.stats(self.output.output)
+
+    print(string.format("%20s ms delay", lib.comma_value(self.orig_delay)))
+    print(string.format("%20s ns corrected", lib.comma_value(self.orig_correction)))
+    print(string.format("%20s ns actual delay", lib.comma_value(self.delay)))
+    print(string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets),
+        lib.comma_value(input_stats.txbytes)))
+    print(
+        string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets),
+            lib.comma_value(output_stats.txbytes)))
 end
