@@ -20,7 +20,7 @@ Delayer4 = {
 function Delayer4:new(conf)
     local o = {}
     o.delay = ffi.new("uint64_t", conf.delay * 1e6 - conf.correction)
-    o.queue = queue.RingQueue()
+    o.queue = queue.RingQueue:new()
     setmetatable(o, self)
     self.__index = self
     return o
