@@ -1,7 +1,7 @@
 struct timed_packet {
     struct packet *packet;
     uint64_t sending_time;
-}
+};
 
 struct delay_buffer {
   struct timed_packet *packets[256 * 1024];
