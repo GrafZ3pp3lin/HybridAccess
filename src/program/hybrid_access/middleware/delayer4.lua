@@ -33,7 +33,7 @@ function Delayer4:push()
     local current_time = C.get_time_ns()
     while not self.queue:empty() and self.queue:front_time() <= current_time do
         local pkt = self.queue:pop()
-        link.transmit(iface_out, pkt.packet)        
+        link.transmit(iface_out, pkt)        
     end
 
     local sending_time = current_time + self.delay

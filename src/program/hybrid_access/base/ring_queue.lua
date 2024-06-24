@@ -2,7 +2,6 @@
 module(..., package.seeall)
 
 local ffi = require("ffi")
-local bit = require("bit")
 
 require("core.packet_h")
 require("program.hybrid_access.base.ring_queue_h")
@@ -11,7 +10,7 @@ local timed_pkt_t = ffi.typeof("struct timed_packet")
 local delayer_buffer_t = ffi.typeof("struct delay_buffer")
 
 local BUFFER_LENGTH = 256 * 1024
-local band = bit.band
+local C = ffi.C
 
 RingQueue = {}
 
@@ -27,20 +26,22 @@ end
 function RingQueue:pop()
     -- assert(not self:empty())
     local buffer = self.buffer
-    local p = buffer.packets[buffer.read]
-    buffer.read = band(buffer.read + 1, BUFFER_LENGTH - 1) -- faster than modulo?
+    local timed_pkt = buffer.packets[buffer.read]
+    buffer.read = (buffer.read + 1) % BUFFER_LENGTH
 
-    return p
+    local p = timed_pkt.packet
+
+    return timed_pkt.packet
 end
 
 function RingQueue:push(pkt, sending_time)
     -- assert(not self:full())
     local buffer = self.buffer
-    local timed_pkt = ffi.new(timed_pkt_t)
+    local timed_pkt = ffi.gc(ffi.new(timed_pkt_t), C.free)
     timed_pkt.packet = pkt
     timed_pkt.sending_time = sending_time
     buffer.packets[buffer.write] = timed_pkt
-    buffer.write = band(buffer.write + 1, BUFFER_LENGTH - 1) -- faster than modulo?
+    buffer.write = (buffer.write + 1) % BUFFER_LENGTH
 end
 
 function RingQueue:empty()
@@ -48,7 +49,7 @@ function RingQueue:empty()
 end
 
 function RingQueue:full()
-    return self.buffer.read == band(self.buffer.write + 1, BUFFER_LENGTH - 1) -- faster than modulo?
+    return self.buffer.read == (self.buffer.write + 1) % BUFFER_LENGTH
 end
 
 function RingQueue:nreadable()
