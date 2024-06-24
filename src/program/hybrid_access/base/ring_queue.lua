@@ -27,12 +27,10 @@ function RingQueue:pop()
     -- assert(not self:empty())
     local buffer = self.buffer
     local timed_pkt = buffer.packets[buffer.read]
+    buffer.packets[buffer.read] = nil
     buffer.read = (buffer.read + 1) % BUFFER_LENGTH
 
-    local p = timed_pkt.packet
-    C.free(timed_pkt)
-
-    return p
+    return timed_pkt.packet
 end
 
 function RingQueue:push(pkt, sending_time)

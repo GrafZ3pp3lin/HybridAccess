@@ -1,5 +1,3 @@
-void free(void *ptr);
-
 struct timed_packet {
     struct packet *packet;
     uint64_t sending_time;
