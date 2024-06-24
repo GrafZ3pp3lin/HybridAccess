@@ -105,7 +105,7 @@ local function generate_config(cfg)
     return c
 end
 
-local function run_worker(path)
+function run_worker(path)
     local cfg = ini.Ini:parse(path)
     local c = generate_config(cfg)
 
