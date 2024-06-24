@@ -21,6 +21,10 @@ local base = require("program.hybrid_access.base.base")
 local function generate_config(cfg)
     local c = config.new()
 
+    config.app(c, "nic_in", mellanox.ConnectX, { pciaddress = cfg.input.pci, queues = {{ id = "q1" }}})
+    config.app(c, "nic_out1", mellanox.ConnectX, { pciaddress = cfg.link1.pci, queues = {{ id = "q1" }}})
+    config.app(c, "nic_out2", mellanox.ConnectX, { pciaddress = cfg.link2.pci, queues = {{ id = "q1" }}})
+
     config.app(c, "link_in", mellanox.IO, { pciaddress = cfg.input.pci, queue = "q1" })
     config.app(c, "link_out1", mellanox.IO, { pciaddress = cfg.link1.pci, queue = "q1" })
     config.app(c, "link_out2", mellanox.IO, { pciaddress = cfg.link2.pci, queue = "q1" })
