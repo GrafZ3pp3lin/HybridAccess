@@ -30,14 +30,15 @@ function RingQueue:pop()
     buffer.read = (buffer.read + 1) % BUFFER_LENGTH
 
     local p = timed_pkt.packet
+    C.free(timed_pkt)
 
-    return timed_pkt.packet
+    return p
 end
 
 function RingQueue:push(pkt, sending_time)
     -- assert(not self:full())
     local buffer = self.buffer
-    local timed_pkt = ffi.gc(ffi.new(timed_pkt_t), C.free)
+    local timed_pkt = ffi.new(timed_pkt_t)
     timed_pkt.packet = pkt
     timed_pkt.sending_time = sending_time
     buffer.packets[buffer.write] = timed_pkt
