@@ -4,7 +4,7 @@ struct timed_packet {
 };
 
 struct delay_buffer {
-  struct timed_packet *packets[256 * 1024];
+  struct timed_packet *packets[128 * 1024];
   // Two cursors:
   //   read:  the next element to be read
   //   write: the next element to be written
