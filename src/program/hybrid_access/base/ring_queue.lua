@@ -9,7 +9,7 @@ require("program.hybrid_access.base.ring_queue_h")
 local timed_pkt_t = ffi.typeof("struct timed_packet")
 local delayer_buffer_t = ffi.typeof("struct delay_buffer")
 
-local BUFFER_LENGTH = 128 * 1024
+local BUFFER_LENGTH = 32 * 1024
 
 RingQueue = {}
 
@@ -23,8 +23,10 @@ end
 function RingQueue:new()
     local o = {}
     o.buffer = ffi.new(delayer_buffer_t)
-    init_queue(o.buffer)
     o.default_sending_time = ffi.new("uint64_t", -1)
+
+    init_queue(o.buffer)
+
     setmetatable(o, self)
     self.__index = self
     return o
@@ -34,9 +36,13 @@ function RingQueue:pop()
     -- assert(not self:empty())
     local buffer = self.buffer
     local timed_pkt = buffer.packets[buffer.read]
+    
+    local pkt_pointer = timed_pkt.packet
+    
+    timed_pkt.packet = nil
     buffer.read = (buffer.read + 1) % BUFFER_LENGTH
 
-    return timed_pkt.packet
+    return pkt_pointer
 end
 
 function RingQueue:push(pkt, sending_time)

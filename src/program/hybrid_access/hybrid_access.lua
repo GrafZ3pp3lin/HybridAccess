@@ -105,15 +105,6 @@ local function generate_config(cfg)
     return c
 end
 
-function run_worker(path)
-    local cfg = ini.Ini:parse(path)
-    local c = generate_config(cfg)
-
-    engine.configure(c)
-    engine.busywait = true
-    engine.main()
-end
-
 local function setup_report(cfg)
     local report_timer = timer.new(
         "report",
@@ -135,6 +126,25 @@ local function setup_report(cfg)
     return report_timer
 end
 
+function run_worker(path)
+    local cfg = ini.Ini:parse(path)
+    local c = generate_config(cfg)
+
+    engine.configure(c)
+    engine.busywait = true
+
+    local report_timer = nil
+    if cfg.report_interval ~= nil then
+        report_timer = setup_report(cfg)
+    end
+
+    engine.main()
+
+    if report_timer ~= nil then
+        timer.cancel(report_timer)
+    end
+end
+
 function run(args)
     if #args ~= 1 then
         error("please provide config path")
@@ -151,17 +161,8 @@ function run(args)
     config.app(c, "nic_out1", mellanox.ConnectX, { pciaddress = cfg.link1.pci, queues = {{ id = "q1" }}})
     config.app(c, "nic_out2", mellanox.ConnectX, { pciaddress = cfg.link2.pci, queues = {{ id = "q1" }}})
 
-    local report_timer = nil
-    if cfg.report_interval ~= nil then
-        report_timer = setup_report(cfg)
-    end
-
     worker.start("io1_worker", ('require("program.hybrid_access.hybrid_access").run_worker(%q)'):format(path))
 
     engine.configure(c)
     engine.main()
-
-    if report_timer ~= nil then
-        timer.cancel(report_timer)
-    end
 end
