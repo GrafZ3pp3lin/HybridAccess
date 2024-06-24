@@ -3,6 +3,7 @@
 module(..., package.seeall)
 
 local engine = require("core.app")
+local worker = require("core.worker")
 
 local mellanox = require("apps.mellanox.connectx")
 
@@ -17,21 +18,8 @@ local delayer4 = require("program.hybrid_access.middleware.delayer4")
 local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
 
-function run(args)
-    if #args ~= 1 then
-        error("please provide config path")
-    end
-    
-    local path = args[1]
-    local cfg = ini.Ini:parse(path)
-    -- local middleware = "./program/hybrid_access/middleware.ini"
-    -- local middleware = ini.Ini:parse(middleware)
-
+local function generate_config(cfg)
     local c = config.new()
-
-    config.app(c, "nic_in", mellanox.ConnectX, { pciaddress = cfg.input.pci, queues = {{ id = "q1" }}})
-    config.app(c, "nic_out1", mellanox.ConnectX, { pciaddress = cfg.link1.pci, queues = {{ id = "q1" }}})
-    config.app(c, "nic_out2", mellanox.ConnectX, { pciaddress = cfg.link2.pci, queues = {{ id = "q1" }}})
 
     config.app(c, "link_in", mellanox.IO, { pciaddress = cfg.input.pci, queue = "q1" })
     config.app(c, "link_out1", mellanox.IO, { pciaddress = cfg.link1.pci, queue = "q1" })
@@ -114,37 +102,66 @@ function run(args)
     print("pipeline link 1: ", pipeline1)
     print("pipeline link 2: ", pipeline2)
 
-    local report_timer = nil
-    if cfg.report_interval ~= nil then
-        report_timer = timer.new(
-            "report",
-            function ()
-                if cfg.report_links then
-                    base.report_links()
-                end
-                if cfg.report_apps then
-                    base.report_apps()
-                    -- base.report_nics()
-                end
-            end,
-            cfg.report_interval,
-            'repeating'
-        )
-        -- print packets statistics
-        timer.activate(report_timer)
-    end
+    return c
+end
+
+local function run_worker(path)
+    local cfg = ini.Ini:parse(path)
+    local c = generate_config(cfg)
 
     engine.configure(c)
-    local start = engine.now()
     engine.busywait = true
-    engine.main({ duration = cfg.duration })
+    engine.main()
+end
 
-    local stop = engine.now()
-    if report_timer ~= nil then
-        timer.cancel(report_timer)
+local function setup_report(cfg)
+    local report_timer = timer.new(
+        "report",
+        function ()
+            if cfg.report_links then
+                base.report_links()
+            end
+            if cfg.report_apps then
+                base.report_apps()
+                -- base.report_nics()
+            end
+        end,
+        cfg.report_interval,
+        'repeating'
+    )
+    -- print packets statistics
+    timer.activate(report_timer)
+
+    return report_timer
+end
+
+function run(args)
+    if #args ~= 1 then
+        error("please provide config path")
+    end
+    
+    local path = args[1]
+    local cfg = ini.Ini:parse(path)
+    -- local middleware = "./program/hybrid_access/middleware.ini"
+    -- local middleware = ini.Ini:parse(middleware)
+
+    local c = config.new()
+
+    config.app(c, "nic_in", mellanox.ConnectX, { pciaddress = cfg.input.pci, queues = {{ id = "q1" }}})
+    config.app(c, "nic_out1", mellanox.ConnectX, { pciaddress = cfg.link1.pci, queues = {{ id = "q1" }}})
+    config.app(c, "nic_out2", mellanox.ConnectX, { pciaddress = cfg.link2.pci, queues = {{ id = "q1" }}})
+
+    local report_timer = nil
+    if cfg.report_interval ~= nil then
+        report_timer = setup_report(cfg)
     end
 
-    if cfg.report_file ~= nil then
-        base.report_to_file(cfg.report_file, start, stop)
+    worker.start("io1_worker", ('require("program.hybrid_access.hybrid_access").run_worker(%q)'):format(path))
+
+    engine.configure(c)
+    engine.main()
+
+    if report_timer ~= nil then
+        timer.cancel(report_timer)
     end
 end

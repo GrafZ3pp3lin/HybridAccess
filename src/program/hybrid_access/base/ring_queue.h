@@ -8,5 +8,6 @@ struct delay_buffer {
   // Two cursors:
   //   read:  the next element to be read
   //   write: the next element to be written
-  int read, write;
+  int read;
+  int write;
 };
