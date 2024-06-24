@@ -3,7 +3,6 @@
 module(..., package.seeall)
 
 local engine = require("core.app")
-local lib = require("core.lib")
 
 local mellanox = require("apps.mellanox.connectx")
 
@@ -14,7 +13,6 @@ local delayer = require("program.hybrid_access.middleware.delayer")
 local delayer2 = require("program.hybrid_access.middleware.delayer2")
 local delayer3 = require("program.hybrid_access.middleware.delayer3")
 local delayer4 = require("program.hybrid_access.middleware.delayer4")
-local printer = require("program.hybrid_access.middleware.printer")
 
 local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
@@ -51,31 +49,6 @@ function run(args)
     local pipeline2 = "in"
 
     -- recombination
-    if cfg.link1.enable.printer_in == true then
-        config.app(c, "printer_in_1", printer.Printer, cfg.link1.printer_in)
-        config.link(c, node_out1.." -> printer_in_1.input")
-        node_out1 = "printer_in_1.output"
-        pipeline1 = pipeline1.." -> printer"
-    end
-    if cfg.link2.enable.printer_in == true then
-        config.app(c, "printer_in_2", printer.Printer, cfg.link2.printer_in)
-        config.link(c, node_out2.." -> printer_in_2.input")
-        node_out2 = "printer_in_2.output"
-        pipeline2 = pipeline2.." -> printer"
-    end
-
-    if cfg.link1.enable.delayer == true then
-        config.app(c, "delayer_1", delayer4.Delayer4, cfg.link1.delayer)
-        config.link(c, node_out1.." -> delayer_1.input")
-        node_out1 = "delayer_1.output"
-        pipeline1 = pipeline1.." -> delayer"
-    end
-    if cfg.link2.enable.delayer == true then
-        config.app(c, "delayer_2", delayer4.Delayer4, cfg.link2.delayer)
-        config.link(c, node_out2.." -> delayer_2.input")
-        node_out2 = "delayer_2.output"
-        pipeline2 = pipeline2.." -> delayer"
-    end
 
     config.link(c, node_out1.." -> recombination.input1")
     config.link(c, node_out2.." -> recombination.input2")
@@ -110,34 +83,30 @@ function run(args)
         pipeline2 = pipeline2.." -> rate limiter"
     end
 
-    if cfg.link1.enable.forwarder == true then
-        config.app(c, "forwarder_out1", forwarder.MacForwarder, cfg.link1.forwarder)
-        config.link(c, node_out1.." -> forwarder_out1.input")
-        node_out1 = "forwarder_out1.output"
-        pipeline1 = pipeline1.." -> forwarder"
+    if cfg.link1.enable.delayer == true then
+        config.app(c, "delayer_1", delayer4.Delayer4, cfg.link1.delayer)
+        config.link(c, node_out1.." -> delayer_1.input")
+        node_out1 = "delayer_1.output"
+        pipeline1 = pipeline1.." -> delayer"
     end
-    if cfg.link2.enable.forwarder == true then
-        config.app(c, "forwarder_out2", forwarder.MacForwarder, cfg.link2.forwarder)
-        config.link(c, node_out2.." -> forwarder_out2.input")
-        node_out2 = "forwarder_out2.output"
-        pipeline2 = pipeline2.." -> forwarder"
+    if cfg.link2.enable.delayer == true then
+        config.app(c, "delayer_2", delayer4.Delayer4, cfg.link2.delayer)
+        config.link(c, node_out2.." -> delayer_2.input")
+        node_out2 = "delayer_2.output"
+        pipeline2 = pipeline2.." -> delayer"
     end
 
-    if cfg.link1.enable.printer_out == true then
-        config.app(c, "printer_out_1", printer.Printer, cfg.link1.printer_out)
-        config.link(c, node_out1.." -> printer_out_1.input")
-        node_out1 = "printer_out_1.output"
-        pipeline1 = pipeline1.." -> printer"
-    end
-    if cfg.link2.enable.printer_out == true then
-        config.app(c, "printer_out_2", printer.Printer, cfg.link2.printer_out)
-        config.link(c, node_out2.." -> printer_out_2.input")
-        node_out2 = "printer_out_2.output"
-        pipeline2 = pipeline2.." -> printer"
-    end
+    config.app(c, "forwarder_out1", forwarder.MacForwarder, cfg.link1.forwarder)
+    config.app(c, "forwarder_out2", forwarder.MacForwarder, cfg.link2.forwarder)
+
+    config.link(c, node_out1.." -> forwarder_out1.input")
+    config.link(c, node_out2.." -> forwarder_out2.input")
+
+    pipeline1 = pipeline1.." -> forwarder"
+    pipeline2 = pipeline2.." -> forwarder"
     
-    config.link(c, node_out1.." -> link_out1.input")
-    config.link(c, node_out2.." -> link_out2.input")
+    config.link(c, "forwarder_out1.output -> link_out1.input")
+    config.link(c, "forwarder_out2.output -> link_out2.input")
 
     pipeline1 = pipeline1.." -> out"
     pipeline2 = pipeline2.." -> out"

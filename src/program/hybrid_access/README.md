@@ -33,8 +33,8 @@ v0 ── v1                v1 ── v0
 
 Commands:
 ping 10.0.100.11 -I 10.0.100.1
-iperf3 -c 10.0.100.11 -B 10.0.100.1 -i 1 -t 30 -O 3 -M 1448
-iperf3 -s -B 10.0.100.11
+./iperf-3.17.1/src/iperf3 -c 10.0.100.11 -B 10.0.100.1 -i 1 -t 30 -O 3 -M 1448 -w 2M
+./iperf-3.17.1/src/iperf3 -s -B 10.0.100.11
 
 ip link set dev ens16 up
 ip addr add 10.0.100.11/24 dev ens16
