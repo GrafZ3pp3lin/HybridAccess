@@ -1,7 +1,8 @@
----@diagnostic disable: inject-field, undefined-field
+---@diagnostic disable: inject-field
 module(..., package.seeall)
 
 local ffi = require("ffi")
+local bit = require("bit")
 
 require("core.packet_h")
 require("program.hybrid_access.base.ring_queue_h")
@@ -10,6 +11,7 @@ local timed_pkt_t = ffi.typeof("struct timed_packet")
 local delayer_buffer_t = ffi.typeof("struct delay_buffer")
 
 local BUFFER_LENGTH = 256 * 1024
+local band = bit.band
 
 RingQueue = {}
 
@@ -26,7 +28,7 @@ function RingQueue:pop()
     -- assert(not self:empty())
     local buffer = self.buffer
     local p = buffer.packets[buffer.read]
-    buffer.read = bit.band(buffer.read + 1, BUFFER_LENGTH - 1) -- faster than modulo?
+    buffer.read = band(buffer.read + 1, BUFFER_LENGTH - 1) -- faster than modulo?
 
     return p
 end
@@ -38,7 +40,7 @@ function RingQueue:push(pkt, sending_time)
     timed_pkt.packet = pkt
     timed_pkt.sending_time = sending_time
     buffer.packets[buffer.write] = timed_pkt
-    buffer.write = bit.band(buffer.write + 1, BUFFER_LENGTH - 1)
+    buffer.write = band(buffer.write + 1, BUFFER_LENGTH - 1) -- faster than modulo?
 end
 
 function RingQueue:empty()
@@ -46,7 +48,7 @@ function RingQueue:empty()
 end
 
 function RingQueue:full()
-    return self.buffer.read == bit.band(self.buffer.write + 1, BUFFER_LENGTH - 1)
+    return self.buffer.read == band(self.buffer.write + 1, BUFFER_LENGTH - 1) -- faster than modulo?
 end
 
 function RingQueue:nreadable()
