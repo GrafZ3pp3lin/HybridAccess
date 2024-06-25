@@ -1,6 +1,6 @@
-enum { QUEUE_SIZE = 32 * 1024 };
-
 #include <stdint.h>
+
+enum { QUEUE_SIZE = 32 * 1024 };
 
 struct timed_packet {
     struct packet *packet;
