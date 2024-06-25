@@ -13,12 +13,12 @@ struct ring_buffer* create_buffer() {
 }
 
 // Check if the buffer is empty
-inline int is_empty(struct ring_buffer *buffer) {
+int is_empty(struct ring_buffer *buffer) {
     return buffer->read == buffer->write;
 }
 
 // Check if the buffer is full
-inline int is_full(struct ring_buffer *buffer) {
+int is_full(struct ring_buffer *buffer) {
     return ((buffer->write + 1) & (QUEUE_SIZE - 1)) == buffer->read;
 }
 

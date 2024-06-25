@@ -16,8 +16,8 @@ struct ring_buffer {
 
 // Function prototypes
 struct ring_buffer* create_buffer();
-inline int is_empty(struct ring_buffer *buffer);
-inline int is_full(struct ring_buffer *buffer);
+int is_empty(struct ring_buffer *buffer);
+int is_full(struct ring_buffer *buffer);
 void enqueue(struct ring_buffer *buffer, struct packet *pkt, uint64_t sending_time);
 struct timed_packet* dequeue(struct ring_buffer *buffer);
 uint64_t peek_time(struct ring_buffer *buffer);
