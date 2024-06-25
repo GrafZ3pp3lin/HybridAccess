@@ -1,5 +1,6 @@
-#include "ring_queue.h"
+#include <stdint.h>
 #include <stdlib.h>
+#include "ring_queue.h"
 
 // Initialize the delay buffer
 struct ring_buffer* create_buffer() {
