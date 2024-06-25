@@ -52,7 +52,7 @@ uint64_t peek_time(struct ring_buffer *buffer) {
 
 // Amount of readable packets
 int buffer_size(struct ring_buffer *buffer) {
-    if (buffer->write > buffer->read) {
+    if (buffer->write >= buffer->read) {
         return buffer->write - buffer->read;
     }
     return buffer->write + QUEUE_SIZE - buffer->read;
