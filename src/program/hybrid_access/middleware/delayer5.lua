@@ -42,7 +42,7 @@ function Delayer5:push()
     local iface_out = assert(self.output.output, "<output> (Output) not found")
 
     local current_time = C.get_time_ns()
-    while not C.is_empty(self.queue) and C.peek_time(self.queue) <= current_time do
+    while C.peek_time(self.queue) <= current_time do
         local pkt = C.dequeue(self.queue)
         link.transmit(iface_out, pkt)
     end
