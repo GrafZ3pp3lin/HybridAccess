@@ -18,6 +18,8 @@ Buffer = {}
 function Buffer:new()
     local o = {
         buffer = C.buffer_new(),
+        buffered = 0,
+        tx_drop = 0,
     }
     setmetatable(o, self)
     self.__index = self
@@ -53,24 +55,21 @@ function Buffer:push()
             local pkt = receive(iface_in)
             if C.buffer_enqueue(self.buffer, pkt) == 0 then
                 packet.free(pkt)
+                self.tx_drop = self.tx_drop + 1
                 break
             end
+            self.buffered = self.buffered + 1
         end
         while not link.empty(iface_in) do
             local pkt = receive(iface_in)
+            self.tx_drop = self.tx_drop + 1
             packet.free(pkt)
         end
     end
 end
 
 function Buffer:report()
-    local input_stats = link.stats(self.input.input)
-    local output_stats = link.stats(self.output.output)
-
-    print(string.format("%20s buffer length", lib.comma_value(C.buffer_size(self.buffer))))
-    print(string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets),
-        lib.comma_value(input_stats.txbytes)))
-    print(
-        string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets),
-            lib.comma_value(output_stats.txbytes)))
+    print(string.format("%20s current buffer length", lib.comma_value(C.buffer_size(self.buffer))))
+    print(string.format("%20s total buffered", lib.comma_value(self.buffered)))
+    print(string.format("%20s dropped", lib.comma_value(self.tx_drop)))
 end

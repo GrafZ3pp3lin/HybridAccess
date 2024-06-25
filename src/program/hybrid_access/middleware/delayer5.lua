@@ -20,7 +20,9 @@ Delayer5 = {
 }
 
 function Delayer5:new(conf)
-    local o = {}
+    local o = {
+        tx_drop = 0,
+    }
     o.delay = ffi.new("uint64_t", conf.delay * 1e6 - conf.correction)
     o.queue = C.db_new()
 
@@ -52,6 +54,7 @@ function Delayer5:push()
         local p = link.receive(iface_in)
         if C.db_enqueue(self.queue, p, sending_time) == 0 then
             packet.free(p)
+            self.tx_drop = self.tx_drop + 1
             break;
         end
     end
@@ -59,17 +62,11 @@ function Delayer5:push()
     while not link.empty(iface_in) do
         local p = link.receive(iface_in)
         packet.free(p)
+        self.tx_drop = self.tx_drop + 1
     end
 end
 
 function Delayer5:report()
-    local input_stats = link.stats(self.input.input)
-    local output_stats = link.stats(self.output.output)
-
-    print(string.format("%20s buffer length", lib.comma_value(C.db_size(self.queue))))
-    print(string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets),
-        lib.comma_value(input_stats.txbytes)))
-    print(
-        string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets),
-            lib.comma_value(output_stats.txbytes)))
+    print(string.format("%20s current buffer length", lib.comma_value(C.db_size(self.queue))))
+    print(string.format("%20s dropped", lib.comma_value(self.tx_drop)))
 end
