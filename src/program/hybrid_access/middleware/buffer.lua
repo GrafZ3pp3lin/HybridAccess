@@ -7,7 +7,7 @@ local lib = require("core.lib")
 local packet = require("core.packet")
 
 require("core.packet_h")
-require("program.hybrid_access.base.delay_buffer_h")
+require("program.hybrid_access.base.buffer_h")
 
 local C = ffi.C
 local min = math.min
