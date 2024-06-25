@@ -22,7 +22,7 @@ Delayer5 = {
 function Delayer5:new(conf)
     local o = {}
     o.delay = ffi.new("uint64_t", conf.delay * 1e6 - conf.correction)
-    o.queue = C.create_buffer()
+    o.queue = C.buffer_new()
 
     print(string.format("%20s ms delay", lib.comma_value(conf.delay)))
     print(string.format("%20s ns corrected", lib.comma_value(conf.correction)))
@@ -34,7 +34,7 @@ function Delayer5:new(conf)
 end
 
 function Delayer5:stop()
-    C.free_buffer(self.queue)
+    C.buffer_free(self.queue)
 end
 
 function Delayer5:push()
@@ -42,15 +42,15 @@ function Delayer5:push()
     local iface_out = assert(self.output.output, "<output> (Output) not found")
 
     local current_time = C.get_time_ns()
-    while C.peek_time(self.queue) <= current_time do
-        local pkt = C.dequeue(self.queue)
+    while C.buffer_peek_time(self.queue) <= current_time do
+        local pkt = C.buffer_dequeue(self.queue)
         link.transmit(iface_out, pkt)
     end
 
     local sending_time = current_time + self.delay
     while not link.empty(iface_in) do
         local p = link.receive(iface_in)
-        if C.enqueue(self.queue, p, sending_time) == 0 then
+        if C.buffer_enqueue(self.queue, p, sending_time) == 0 then
             packet.free(p)
             break;
         end
