@@ -44,14 +44,16 @@ function Delayer5:push()
     local current_time = C.get_time_ns()
     while C.peek_time(self.queue) <= current_time do
         local pkt = C.dequeue(self.queue)
-        print("send pkt", pkt.length)
         link.transmit(iface_out, pkt)
     end
 
     local sending_time = current_time + self.delay
-    while not link.empty(iface_in) and not C.is_full(self.queue) do
+    while not link.empty(iface_in) do
         local p = link.receive(iface_in)
-        C.enqueue(self.queue, p, sending_time)
+        if C.enqueue(self.queue, p, sending_time) == 0 then
+            packet.free(p)
+            break;
+        end
     end
 
     while not link.empty(iface_in) do
