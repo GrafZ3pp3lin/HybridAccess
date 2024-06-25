@@ -6,33 +6,23 @@ local ffi = require("ffi")
 require("core.packet_h")
 require("program.hybrid_access.base.ring_queue_h")
 
-local timed_pkt_t = ffi.typeof("struct timed_packet")
 local delayer_buffer_t = ffi.typeof("struct delay_buffer")
 
-local BUFFER_LENGTH = 32 * 1024
+local BUFFER_LENGTH = ffi.C.QUEUE_SIZE
 
 RingQueue = {}
-
-local function init_queue(buffer)
-    for i = 0, BUFFER_LENGTH - 1 do
-        local timed_pkt = ffi.new(timed_pkt_t)
-        buffer.packets[i] = timed_pkt
-    end
-end
 
 function RingQueue:new()
     local o = {}
     o.buffer = ffi.new(delayer_buffer_t)
     o.default_sending_time = ffi.new("uint64_t", -1)
 
-    init_queue(o.buffer)
-
     setmetatable(o, self)
     self.__index = self
     return o
 end
 
-function RingQueue:pop()
+function RingQueue:dequeue()
     -- assert(not self:empty())
     local buffer = self.buffer
     local timed_pkt = buffer.packets[buffer.read]
@@ -45,7 +35,7 @@ function RingQueue:pop()
     return pkt_pointer
 end
 
-function RingQueue:push(pkt, sending_time)
+function RingQueue:enqueue(pkt, sending_time)
     -- assert(not self:full())
     local buffer = self.buffer
     local timed_pkt = buffer.packets[buffer.write]
@@ -55,11 +45,11 @@ function RingQueue:push(pkt, sending_time)
     buffer.write = (buffer.write + 1) % BUFFER_LENGTH
 end
 
-function RingQueue:empty()
+function RingQueue:is_empty()
     return self.buffer.read == self.buffer.write
 end
 
-function RingQueue:full()
+function RingQueue:is_full()
     return self.buffer.read == (self.buffer.write + 1) % BUFFER_LENGTH
 end
 
@@ -72,8 +62,8 @@ function RingQueue:nreadable()
     end
 end
 
-function RingQueue:front_time()
-    if self:empty() then
+function RingQueue:peek_time()
+    if self:is_empty() then
         return self.default_sending_time
     else
         return self.buffer.packets[self.buffer.read].sending_time

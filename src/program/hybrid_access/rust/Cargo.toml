@@ -1,0 +1,8 @@
+[package]
+name = "hybrid_access"
+version = "0.1.0"
+
+[lib]
+name = "extern"
+path = "RingQueue.rs"
+crate-type = ["dylib"]
