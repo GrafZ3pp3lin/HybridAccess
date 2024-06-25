@@ -1,6 +1,3 @@
-#ifndef RING_BUFFER_H
-#define RING_BUFFER_H
-
 #define QUEUE_SIZE (32 * 1024)
 
 #include <stdint.h>
@@ -28,5 +25,3 @@ struct timed_packet* dequeue(struct ring_buffer *buffer);
 uint64_t peek_time(struct ring_buffer *buffer);
 int buffer_size(struct ring_buffer *buffer);
 void free_buffer(struct ring_buffer *buffer);
-
-#endif // RING_BUFFER_H
