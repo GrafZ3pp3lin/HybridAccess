@@ -1,4 +1,4 @@
-#define QUEUE_SIZE (32 * 1024)
+enum { QUEUE_SIZE = 32 * 1024 };
 
 #include <stdint.h>
 
