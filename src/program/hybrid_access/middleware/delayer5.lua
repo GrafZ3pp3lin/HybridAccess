@@ -44,6 +44,7 @@ function Delayer5:push()
     local current_time = C.get_time_ns()
     while C.peek_time(self.queue) <= current_time do
         local pkt = C.dequeue(self.queue)
+        print("send pkt", pkt.length)
         link.transmit(iface_out, pkt)
     end
 
