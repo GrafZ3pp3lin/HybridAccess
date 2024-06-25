@@ -15,6 +15,7 @@ local rate_limiter = require("program.hybrid_access.middleware.rate_limiter")
 -- local delayer3 = require("program.hybrid_access.middleware.delayer3")
 -- local delayer4 = require("program.hybrid_access.middleware.delayer4")
 local delayer5 = require("program.hybrid_access.middleware.delayer5")
+local buffer = require("program.hybrid_access.middleware.buffer")
 
 local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
@@ -43,14 +44,20 @@ local function generate_config(cfg)
 
     -- recombination
 
-    config.link(c, node_out1.." -> recombination.input1")
-    config.link(c, node_out2.." -> recombination.input2")
+    config.app(c, "buffer_1", buffer.Buffer)
+    config.app(c, "buffer_2", buffer.Buffer)
+
+    config.link(c, node_out1.." -> buffer_1.input")
+    config.link(c, node_out2.." -> buffer_2.input")
+
+    config.link(c, "buffer_1.output -> recombination.input1")
+    config.link(c, "buffer_2.output -> recombination.input2")
 
     config.link(c, "recombination.output -> forwarder_in.input")
     config.link(c, "forwarder_in.output -> link_in.input")
     
-    pipeline1 = pipeline1.." -> recombination"
-    pipeline2 = pipeline2.." -> recombination"
+    pipeline1 = pipeline1.." -> buffer -> recombination"
+    pipeline2 = pipeline2.." -> buffer -> recombination"
     print("pipeline link 1: ", pipeline1)
     print("pipeline link 2: ", pipeline2)
 
