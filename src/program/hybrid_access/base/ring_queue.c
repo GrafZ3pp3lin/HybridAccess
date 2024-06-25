@@ -1,4 +1,5 @@
 #include "ring_queue.h"
+#include <stdlib.h>
 
 // Initialize the delay buffer
 struct ring_buffer* create_buffer() {
@@ -34,18 +35,9 @@ void enqueue(struct ring_buffer *buffer, struct packet *pkt, uint64_t sending_ti
 // not empty check needs to be done
 struct timed_packet* dequeue(struct ring_buffer *buffer) {
     // assert not empty
-    struct timed_packet *pkt = &buffer->packets[buffer->read];
+    struct timed_packet *pkt = &(buffer->packets[buffer->read]);
     buffer->read = (buffer->read + 1) & (QUEUE_SIZE - 1);
     return pkt;
-}
-
-// Peek at the next timed packet to be read without removing it from the buffer
-struct timed_packet* peek(struct ring_buffer *buffer) {
-    if (is_empty(buffer)) {
-        // Buffer is empty
-        return NULL;
-    }
-    return &buffer->packets[buffer->read];
 }
 
 // Peek at the sending time of the next timed packet to be read without removing it from the buffer
