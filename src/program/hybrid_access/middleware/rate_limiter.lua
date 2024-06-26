@@ -5,7 +5,6 @@ module(..., package.seeall)
 local engine = require("core.app")
 local link = require("core.link")
 local packet = require("core.packet")
-local counter = require("core.counter")
 local lib = require("core.lib")
 
 local min = math.min
@@ -20,9 +19,6 @@ TBRateLimiter = {
         initial_capacity = { required = false },
         -- take preamble, start frame delimiter and ipg into account
         respect_layer1_overhead = { default = false }
-    },
-    shm = {
-        txdrop = { counter }
     }
 }
 
@@ -33,11 +29,13 @@ function TBRateLimiter:new(conf)
         byte_rate = math.floor(conf.rate / 8),
         bucket_capacity = conf.bucket_capacity,
         contingent = conf.initial_capacity,
-        additional_overhead = 0
+        additional_overhead = 0,
+        txdrop = 0
     }
     if conf.respect_layer1_overhead == true then
         o.additional_overhead = 7 + 1 + 4 + 12
     end
+    print(string.format("%20s byte/s, %20s capacity", lib.comma_value(o.byte_rate), lib.comma_value(o.bucket_capacity)))
     setmetatable(o, self)
     self.__index = self
     return o
@@ -47,10 +45,9 @@ function TBRateLimiter:report()
     local input_stats = link.stats(self.input.input)
     local output_stats = link.stats(self.output.output)
 
-    print(string.format("%20s byte/s, %20s capacity", lib.comma_value(self.byte_rate), lib.comma_value(self.bucket_capacity)))
     print(string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)))
     print(string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)))
-    print(string.format("%20s dropped", lib.comma_value(counter.read(self.shm.txdrop))))
+    print(string.format("%20s dropped", lib.comma_value(self.txdrop)))
 end
 
 function TBRateLimiter:push()
@@ -79,7 +76,7 @@ function TBRateLimiter:push()
             link.transmit(o, p)
         else
             -- discard packet
-            counter.add(self.shm.txdrop)
+            self.txdrop = self.txdrop + 1
             packet.free(p)
             break
         end
@@ -87,7 +84,7 @@ function TBRateLimiter:push()
     for _ = 1, link.nreadable(i) do
         -- discard rest of packages
         local p = link.receive(i)
-        counter.add(self.shm.txdrop)
+        self.txdrop = self.txdrop + 1
         packet.free(p)
     end
 end

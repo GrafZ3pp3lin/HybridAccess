@@ -144,8 +144,82 @@ local function setup_report(cfg)
     return report_timer
 end
 
-function run_worker(path)
+local function parse_cli(str, cfg)
+    local overwrites = {};
+    
+    for i in string.gmatch(str, "([^;]+)") do
+        local k, v = string.match(i, "^-(%w+)=\"?(%w+)\"?$")
+        if k and v then
+            overwrites[k] = v
+        end
+    end
+    
+    for key, value in pairs(overwrites) do
+        if key == "d1" or key == "delay1" then
+            cfg.link1.delayer.delay = tonumber(value)
+        elseif key == "d2" or key == "delay2" then
+            cfg.link2.delayer.delay = tonumber(value)
+        elseif key == "d" or key == "delay" then
+            local d = tonumber(value)
+            if d then
+                cfg.link1.delayer.delay = d
+                cfg.link2.delayer.delay = d
+            elseif value == "off" then
+                cfg.link1.enable.delayer = false
+                cfg.link2.enable.delayer = false
+            end
+        elseif key == "r1" or key == "rate1" then
+            cfg.link1.rate_limiter.rate = tonumber(value)
+        elseif key == "r2" or key == "rate2" then
+            cfg.link2.rate_limiter.rate = tonumber(value)
+        elseif key == "r" or key == "rate" then
+            local d = tonumber(value)
+            if d then
+                cfg.link1.rate_limiter.rate = d
+                cfg.link2.rate_limiter.rate = d
+            elseif value == "off" then
+                cfg.link1.enable.rate_limiter = false
+                cfg.link2.enable.rate_limiter = false
+            end
+        elseif key == "c1" or key == "capacity1" then
+            cfg.link1.rate_limiter.bucket_capacity = tonumber(value)
+        elseif key == "c2" or key == "capacity2" then
+            cfg.link2.rate_limiter.bucket_capacity = tonumber(value)
+        elseif key == "c" or key == "capacity" then
+            cfg.link1.rate_limiter.bucket_capacity = tonumber(value)
+            cfg.link2.rate_limiter.bucket_capacity = tonumber(value)
+        elseif key == "rd1" or key == "rec_delay1" then
+            cfg.recombination.config.link_delays[1] = tonumber(value)
+        elseif key == "rd2" or key == "rec_delay2" then
+            cfg.recombination.config.link_delays[2] = tonumber(value)
+        elseif key == "rd" or key == "rec_delay" then
+            cfg.recombination.config.link_delays[1] = tonumber(value)
+            cfg.recombination.config.link_delays[2] = tonumber(value)
+        elseif key == "l" or key == "loadbalancer" then
+            if value == "sl" or value == "singlelink" then
+                cfg.loadbalancer.path = "program.hybrid_access.loadbalancer.single_link"
+                cfg.loadbalancer.type = "SingleLink"
+            elseif value == "rr" or value == "roundrobin" then
+                cfg.loadbalancer.path = "program.hybrid_access.loadbalancer.roundrobin"
+                cfg.loadbalancer.type = "RoundRobin"
+            elseif value == "wrr" or value == "weighted_roundrobin" then
+                cfg.loadbalancer.path = "program.hybrid_access.loadbalancer.weighted_roundrobin"
+                cfg.loadbalancer.type = "WeightedRoundRobin"
+            elseif value == "tb" or value == "tokenbucket" then
+                cfg.loadbalancer.path = "program.hybrid_access.loadbalancer.tokenbucket"
+                cfg.loadbalancer.type = "TokenBucket"
+            elseif value == "tbddc" or value == "tokenbucket_ddc" then
+                cfg.loadbalancer.path = "program.hybrid_access.loadbalancer.tokenbucket_ddc"
+                cfg.loadbalancer.type = "TokenBucketDDC"
+            end
+        end
+    end
+end
+
+function run_worker(path, args_str)
     local cfg = ini.Ini:parse(path)
+    parse_cli(args_str, cfg)
+
     local c = generate_config(cfg)
 
     engine.configure(c)
@@ -164,21 +238,17 @@ function run_worker(path)
 end
 
 function run(args)
-    if #args ~= 1 then
+    if #args == 0 then
         error("please provide config path")
     end
     
     local path = args[1]
-    -- local cfg = ini.Ini:parse(path)
-    -- local middleware = "./program/hybrid_access/middleware.ini"
-    -- local middleware = ini.Ini:parse(middleware)
+    local rest = table.concat(args, ";", 2)
 
+    -- local cfg = ini.Ini:parse(path)
+    -- local middleware = ini.Ini:parse(middleware)
     
-    -- config.app(c, "nic_in", mellanox.ConnectX, { pciaddress = cfg.input.pci, queues = {{ id = "q1" }}})
-    -- config.app(c, "nic_out1", mellanox.ConnectX, { pciaddress = cfg.link1.pci, queues = {{ id = "q1" }}})
-    -- config.app(c, "nic_out2", mellanox.ConnectX, { pciaddress = cfg.link2.pci, queues = {{ id = "q1" }}})
-    
-    worker.start("io1_worker", ('require("program.hybrid_access.hybrid_access").run_worker(%q)'):format(path))
+    worker.start("io1_worker", ('require("program.hybrid_access.hybrid_access").run_worker(%q, %q)'):format(path, rest))
     
     local c = config.new()
     engine.configure(c)

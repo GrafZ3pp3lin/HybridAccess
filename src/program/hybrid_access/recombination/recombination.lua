@@ -4,7 +4,6 @@ local ffi = require("ffi")
 local link = require("core.link")
 local engine = require("core.app")
 local lib = require("core.lib")
-local counter = require("core.counter")
 
 local co = require("program.hybrid_access.base.constants")
 
@@ -16,15 +15,6 @@ Recombination.config = {
     pull_npackets = { default = 102 },
     mode = { required = false }
 }
-Recombination.shm = {
-    timeout_startet = { counter },
-    timeout_reached = { counter },
-    timeout_extend = { counter },
-    drop_seq_no = { counter },
-    regular_pkts = { counter },
-    missing = { counter },
-    tx_no_transmit = { counter }
-}
 
 function Recombination:new(conf)
     local o = {
@@ -32,8 +22,10 @@ function Recombination:new(conf)
         link_delays = conf.link_delays,
         pull_npackets = conf.pull_npackets,
         wait_until = nil,
-        messages = {},
-        message_idx = 1
+        timeout_startet = 0,
+        timeout_reached = 0,
+        drop_seq_no = 0,
+        missing = 0,
     }
     if conf.mode == "IP" then
         print("Recombination in ip mode")
@@ -42,6 +34,7 @@ function Recombination:new(conf)
         print("Recombination in eth mode")
         self.hybrid_access = require("program.hybrid_access.base.hybrid_access").HybridAccess:new()
     end
+    print(string.format("%d link delay for link 1, %d link delay for link 2", o.link_delays[1], o.link_delays[2]))
     setmetatable(o, self)
     self.__index = self
     return o
@@ -56,19 +49,12 @@ function Recombination:report()
     print(string.format("%20s # / %20s b in 2", lib.comma_value(in2_stats.txpackets), lib.comma_value(in2_stats.txbytes)))
     print(string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets),
         lib.comma_value(output_stats.txbytes)))
-    print(string.format("%20s regular packets (non hybrid access)", lib.comma_value(counter.read(self.shm.regular_pkts))))
-    print(string.format("%20s timeout started", lib.comma_value(counter.read(self.shm.timeout_startet))))
-    print(string.format("%20s timeout reached", lib.comma_value(counter.read(self.shm.timeout_reached))))
-    print(string.format("%20s timeout extended", lib.comma_value(counter.read(self.shm.timeout_extend))))
-    print(string.format("%20s not transmitted packet", lib.comma_value(counter.read(self.shm.tx_no_transmit))))
+    print(string.format("%20s timeout started", lib.comma_value(self.timeout_startet)))
+    print(string.format("%20s timeout reached", lib.comma_value(self.timeout_reached)))
+    print(string.format("%20s timeout extended", lib.comma_value(self.timeout_extend)))
     print(string.format("%20s dropped packages because of too low seq num",
-        lib.comma_value(counter.read(self.shm.drop_seq_no))))
-    print(string.format("%20s missing seq nums", lib.comma_value(counter.read(self.shm.missing))))
-    -- for i, msg in ipairs(self.messages) do
-    --     print(msg)
-    --     self.messages[i] = nil
-    -- end
-    -- self.message_idx = 1
+        lib.comma_value(self.drop_seq_no)))
+    print(string.format("%20s missing seq nums", lib.comma_value(self.missing)))
 end
 
 function Recombination:push()
@@ -122,7 +108,7 @@ function Recombination:process_links(output)
                 break
             elseif ha_header.seq_no < self.next_pkt_num then
                 -- Discard packets with a smaller sequence number than expected
-                counter.add(self.shm.drop_seq_no)
+                self.drop_seq_no = self.drop_seq_no + 1
                 local p_real = link.receive(self.input[i])
                 packet.free(p_real)
                 buffered_header = nil
@@ -135,18 +121,15 @@ function Recombination:process_links(output)
         end
         if buffered_header ~= nil then
             if not empty_link then
-                -- self.messages[self.message_idx] = string.format("last seqno %i, take %i", self.next_pkt_num, buffered_header.seq_no)
-                -- self.message_idx = self.message_idx + 1
-                counter.add(self.shm.missing, buffered_header.seq_no - self.next_pkt_num)
+                self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num)
                 self:process_packet(self.input[buffered_input_index], output, buffered_header)
                 self.wait_until = nil
             elseif self.wait_until ~= nil then
                 -- we wait already for another packet
-                counter.add(self.shm.timeout_extend)
                 break
             else
                 local now = engine.now()
-                counter.add(self.shm.timeout_startet)
+                self.timeout_startet = self.timeout_startet + 1
                 self.wait_until = now + self:estimate_wait_time()
                 self.empty_links = self:get_empty_links()
                 break
@@ -170,9 +153,7 @@ function Recombination:process_waited(output)
         end
     end
     if buffered_header ~= nil then
-        -- self.messages[self.message_idx] = string.format("waited: last seqno %i, take %i", self.next_pkt_num, buffered_header.seq_no)
-        -- self.message_idx = self.message_idx + 1
-        counter.add(self.shm.missing, buffered_header.seq_no - self.next_pkt_num)
+        self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num)
         self:process_packet(self.input[buffered_input_index], output, buffered_header)
     else
         print("waited for timeout and no packet found")
@@ -186,7 +167,7 @@ end
 function Recombination:continue_processing()
     if engine.now() >= self.wait_until then
         self.wait_until = nil
-        counter.add(self.shm.timeout_reached)
+        self.timeout_reached = self.timeout_reached + 1
         return true, true
     else
         -- check if an empty link is no longer empty
@@ -241,7 +222,6 @@ function Recombination:read_next_hybrid_access_pkt(input, output)
     local ha_header = self.hybrid_access:get_header(p)
     if ha_header == nil then
         repeat
-            counter.add(self.shm.regular_pkts)
             -- just forward non hybrid packets
             local p_real = link.receive(input)
             link.transmit(output, p_real)
@@ -266,7 +246,6 @@ function Recombination:process_packet(input, output, ha_header)
         p = self.hybrid_access:remove_header(p, ha_header.buf_type) -- DO NOT ACCESS ha_header after this, because memory gets overwritten here
         link.transmit(output, p)
     else
-        counter.add(self.shm.tx_no_transmit)
         packet.free(p)
     end
 end
