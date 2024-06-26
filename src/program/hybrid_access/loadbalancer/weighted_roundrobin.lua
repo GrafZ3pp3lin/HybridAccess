@@ -23,7 +23,7 @@ function WeightedRoundRobin:new(conf)
     else
         error("bandwidths must be divisible without remainder")
     end
-    print(string.format("weighted roundrobin: %i link1 / %i link2", w1, w2))
+    print(string.format("weighted roundrobin: %i link1 / %i link2", w1, w2 - w1))
     local o = {
         index = 0,
         w1 = w1,
