@@ -212,6 +212,20 @@ local function parse_cli(str, cfg)
                 cfg.loadbalancer.path = "program.hybrid_access.loadbalancer.tokenbucket_ddc"
                 cfg.loadbalancer.type = "TokenBucketDDC"
             end
+        elseif key == "wrrb1" or value == "wrr_bandwidth1" then
+            if not cfg.loadbalancer.config.bandwidths then
+                cfg.loadbalancer.config.bandwidths = {}
+            end
+            cfg.loadbalancer.config.bandwidths.output1 = tonumber(value)
+        elseif key == "wrrb2" or value == "wrr_bandwidth2" then
+            if not cfg.loadbalancer.config.bandwidths then
+                cfg.loadbalancer.config.bandwidths = {}
+            end
+            cfg.loadbalancer.config.bandwidths.output2 = tonumber(value)
+        elseif key == "tbr" or value == "tb_rate" then
+            cfg.loadbalancer.config.rate = tonumber(value)
+        elseif key == "tbc" or value == "tb_capacity" then
+            cfg.loadbalancer.config.capacity = tonumber(value)
         end
     end
 end

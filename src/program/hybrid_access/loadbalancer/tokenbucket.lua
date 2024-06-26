@@ -64,15 +64,3 @@ function TokenBucket:push()
         self:send_pkt(p, o2)
     end
 end
-
-function TokenBucket:process_packet(i, o1, o2)
-    local p = link.receive(i)
-    local length = p.length + self.additional_overhead
-
-    if length <= self.contingent then
-        self.contingent = self.contingent - length
-        self:send_pkt(p, o1)
-    else
-        self:send_pkt(p, o2)
-    end
-end

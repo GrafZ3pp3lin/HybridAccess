@@ -34,7 +34,7 @@ function Recombination:new(conf)
         print("Recombination in eth mode")
         self.hybrid_access = require("program.hybrid_access.base.hybrid_access").HybridAccess:new()
     end
-    print(string.format("%d link delay for link 1, %d link delay for link 2", o.link_delays[1], o.link_delays[2]))
+    print(string.format("%f link delay for link 1, %f link delay for link 2", o.link_delays[1], o.link_delays[2]))
     setmetatable(o, self)
     self.__index = self
     return o

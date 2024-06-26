@@ -14,7 +14,7 @@ TokenBucketDDC.config = {
 
 function TokenBucketDDC:new(conf)
     local o = {
-        rate = conf.rate,
+        byte_rate = math.floor(conf.rate / 8),
         capacity = conf.capacity,
         contingent = conf.capacity,
         class_type = "TokenBucket with delay difference compensation"
@@ -30,29 +30,34 @@ function TokenBucketDDC:push()
     local o1 = assert(self.output.output1, "output port 1 not found")
     local o2 = assert(self.output.output2, "output port 2 not found")
 
-    do
-        local cur_now = tonumber(engine.now())
-        local last_time = self.last_time or cur_now
-        self.contingent = min(
-            self.contingent + self.rate * (cur_now - last_time),
-            self.capacity
-        )
-        self.last_time = cur_now
+    if link.empty(i) then
+        return
     end
+
+    local cur_now = tonumber(engine.now())
+    local last_time = self.last_time or cur_now
+    local interval = cur_now - last_time
+    self.contingent = min(
+        self.contingent + self.byte_rate * interval,
+        self.capacity
+    )
+    self.last_time = cur_now
 
     for _ = 1, link.nreadable(i) do
-        self:process_packet(i, o1, o2)
+        local p = link.receive(i)
+        local length = p.length + self.additional_overhead
+
+        if length <= self.contingent then
+            self.contingent = self.contingent - length
+            self:send_pkt_with_ddc(p, o1, o2)
+        else
+            self:send_pkt_with_ddc(p, o2, o1)
+            break
+        end
     end
-end
-
-function TokenBucketDDC:process_packet(i, o1, o2)
-    local p = link.receive(i)
-    local length = p.length
-
-    if length <= self.contingent then
-        self.contingent = self.contingent - length
-        self:send_pkt_with_ddc(p, o1, o2)
-    else
+    for _ = 1, link.nreadable(i) do
+        -- send rest of packages to output 2
+        local p = link.receive(i)
         self:send_pkt_with_ddc(p, o2, o1)
     end
 end
