@@ -173,15 +173,16 @@ function run(args)
     -- local middleware = "./program/hybrid_access/middleware.ini"
     -- local middleware = ini.Ini:parse(middleware)
 
-    -- local c = config.new()
-
+    
     -- config.app(c, "nic_in", mellanox.ConnectX, { pciaddress = cfg.input.pci, queues = {{ id = "q1" }}})
     -- config.app(c, "nic_out1", mellanox.ConnectX, { pciaddress = cfg.link1.pci, queues = {{ id = "q1" }}})
     -- config.app(c, "nic_out2", mellanox.ConnectX, { pciaddress = cfg.link2.pci, queues = {{ id = "q1" }}})
-
+    
     worker.start("io1_worker", ('require("program.hybrid_access.hybrid_access").run_worker(%q)'):format(path))
-
-    -- engine.configure(c)
+    
+    local c = config.new()
+    engine.configure(c)
+    engine.main()
 
     -- local c = generate_config(cfg)
     -- engine.configure(c)
@@ -190,5 +191,4 @@ function run(args)
     --     setup_report(cfg)
     -- end
 
-    -- engine.main()
 end
