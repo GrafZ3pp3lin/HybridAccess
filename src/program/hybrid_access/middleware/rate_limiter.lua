@@ -35,7 +35,7 @@ function TBRateLimiter:new(conf)
     if conf.respect_layer1_overhead == true then
         o.additional_overhead = 7 + 1 + 4 + 12
     end
-    print(string.format("%20s byte/s, %20s capacity", lib.comma_value(o.byte_rate), lib.comma_value(o.bucket_capacity)))
+    print(string.format("rate limiter: %20s byte/s, %20s capacity", lib.comma_value(o.byte_rate), lib.comma_value(o.bucket_capacity)))
     setmetatable(o, self)
     self.__index = self
     return o

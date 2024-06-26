@@ -26,9 +26,7 @@ function Delayer5:new(conf)
     o.delay = ffi.new("uint64_t", conf.delay * 1e6 - conf.correction)
     o.queue = C.db_new()
 
-    print(string.format("%20s ms delay", lib.comma_value(conf.delay)))
-    print(string.format("%20s ns corrected", lib.comma_value(conf.correction)))
-    print(string.format("%20s ns actual delay", lib.comma_value(o.delay)))
+    print(string.format("delay: %se6 - %s = %s", lib.comma_value(conf.delay), lib.comma_value(conf.correction), lib.comma_value(o.delay)))
 
     setmetatable(o, self)
     self.__index = self

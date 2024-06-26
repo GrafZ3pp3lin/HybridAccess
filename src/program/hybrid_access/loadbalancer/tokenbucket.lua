@@ -22,6 +22,7 @@ function TokenBucket:new(conf)
         class_type = "TokenBucket"
     }
     o.additional_overhead = 7 + 1 + 4 + 12
+    print(string.format("tokenbucket: %20s byte/s, %20s capacity", o.byte_rate, o.capacity))
     setmetatable(o, self)
     self.__index = self
     o:setup(conf.setup)

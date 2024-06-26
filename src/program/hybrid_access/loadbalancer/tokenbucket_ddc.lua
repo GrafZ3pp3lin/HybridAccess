@@ -20,6 +20,7 @@ function TokenBucketDDC:new(conf)
         class_type = "TokenBucket with delay difference compensation"
     }
     setmetatable(o, self)
+    print(string.format("tokenbucket wrr: %20s byte/s, %20s capacity", o.byte_rate, o.capacity))
     self.__index = self
     o:setup(conf.setup)
     return o
