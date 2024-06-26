@@ -3,7 +3,7 @@
 module(..., package.seeall)
 
 local engine = require("core.app")
--- local worker = require("core.worker")
+local worker = require("core.worker")
 
 local mellanox = require("apps.mellanox.connectx")
 
@@ -44,17 +44,17 @@ local function generate_config(cfg)
 
     -- recombination
 
-    -- config.app(c, "buffer_1", buffer.Buffer)
-    -- config.app(c, "buffer_2", buffer.Buffer)
+    config.app(c, "buffer_1", buffer.Buffer)
+    config.app(c, "buffer_2", buffer.Buffer)
 
-    -- config.link(c, node_out1.." -> buffer_1.input")
-    -- config.link(c, node_out2.." -> buffer_2.input")
+    config.link(c, node_out1.." -> buffer_1.input")
+    config.link(c, node_out2.." -> buffer_2.input")
 
-    -- config.link(c, "buffer_1.output -> recombination.input1")
-    -- config.link(c, "buffer_2.output -> recombination.input2")
+    config.link(c, "buffer_1.output -> recombination.input1")
+    config.link(c, "buffer_2.output -> recombination.input2")
 
-    config.link(c, node_out1.." -> recombination.input1")
-    config.link(c, node_out2.." -> recombination.input2")
+    -- config.link(c, node_out1.." -> recombination.input1")
+    -- config.link(c, node_out2.." -> recombination.input2")
 
     config.link(c, "recombination.output -> forwarder_in.input")
     config.link(c, "forwarder_in.output -> link_in.input")
@@ -86,6 +86,18 @@ local function generate_config(cfg)
         pipeline2 = pipeline2.." -> rate limiter"
     end
 
+    config.app(c, "forwarder_out1", forwarder.MacForwarder, cfg.link1.forwarder)
+    config.app(c, "forwarder_out2", forwarder.MacForwarder, cfg.link2.forwarder)
+
+    config.link(c, node_out1.." -> forwarder_out1.input")
+    config.link(c, node_out2.." -> forwarder_out2.input")
+
+    pipeline1 = pipeline1.." -> forwarder"
+    pipeline2 = pipeline2.." -> forwarder"
+
+    node_out1 = "forwarder_out1.output"
+    node_out2 = "forwarder_out2.output"
+
     if cfg.link1.enable.delayer == true then
         config.app(c, "delayer_1", delayer5.Delayer5, cfg.link1.delayer)
         config.link(c, node_out1.." -> delayer_1.input")
@@ -98,18 +110,9 @@ local function generate_config(cfg)
         node_out2 = "delayer_2.output"
         pipeline2 = pipeline2.." -> delayer"
     end
-
-    config.app(c, "forwarder_out1", forwarder.MacForwarder, cfg.link1.forwarder)
-    config.app(c, "forwarder_out2", forwarder.MacForwarder, cfg.link2.forwarder)
-
-    config.link(c, node_out1.." -> forwarder_out1.input")
-    config.link(c, node_out2.." -> forwarder_out2.input")
-
-    pipeline1 = pipeline1.." -> forwarder"
-    pipeline2 = pipeline2.." -> forwarder"
     
-    config.link(c, "forwarder_out1.output -> link_out1.input")
-    config.link(c, "forwarder_out2.output -> link_out2.input")
+    config.link(c, node_out1.." -> link_out1.input")
+    config.link(c, node_out2.." -> link_out2.input")
 
     pipeline1 = pipeline1.." -> out"
     pipeline2 = pipeline2.." -> out"
@@ -166,7 +169,7 @@ function run(args)
     end
     
     local path = args[1]
-    local cfg = ini.Ini:parse(path)
+    -- local cfg = ini.Ini:parse(path)
     -- local middleware = "./program/hybrid_access/middleware.ini"
     -- local middleware = ini.Ini:parse(middleware)
 
@@ -176,16 +179,16 @@ function run(args)
     -- config.app(c, "nic_out1", mellanox.ConnectX, { pciaddress = cfg.link1.pci, queues = {{ id = "q1" }}})
     -- config.app(c, "nic_out2", mellanox.ConnectX, { pciaddress = cfg.link2.pci, queues = {{ id = "q1" }}})
 
-    -- worker.start("io1_worker", ('require("program.hybrid_access.hybrid_access").run_worker(%q)'):format(path))
+    worker.start("io1_worker", ('require("program.hybrid_access.hybrid_access").run_worker(%q)'):format(path))
 
     -- engine.configure(c)
 
-    local c = generate_config(cfg)
-    engine.configure(c)
-    engine.busywait = true
-    if cfg.report_interval ~= nil then
-        setup_report(cfg)
-    end
+    -- local c = generate_config(cfg)
+    -- engine.configure(c)
+    -- engine.busywait = true
+    -- if cfg.report_interval ~= nil then
+    --     setup_report(cfg)
+    -- end
 
-    engine.main()
+    -- engine.main()
 end

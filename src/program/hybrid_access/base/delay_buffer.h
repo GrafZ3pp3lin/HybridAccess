@@ -1,4 +1,4 @@
-enum { DELAY_BUFFER_SIZE = 64 * 1024 };
+enum { DELAY_BUFFER_SIZE = 128 * 1024 };
 
 struct timed_packet {
     struct packet *packet;
