@@ -3,16 +3,12 @@
 module(..., package.seeall)
 
 local engine = require("core.app")
-local lib = require("core.lib")
 
 local mellanox = require("apps.mellanox.connectx")
 
-local recombination = require("program.hybrid_access.recombination.recombination")
 local forwarder = require("program.hybrid_access.middleware.mac_forwarder")
+local delayer = require("program.hybrid_access.middleware.delayer5")
 local rate_limiter = require("program.hybrid_access.middleware.rate_limiter")
-local delayer = require("program.hybrid_access.middleware.delayer")
-local printer = require("program.hybrid_access.middleware.printer")
-local stats_counter = require("program.hybrid_access.middleware.stats_counter")
 
 local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
@@ -36,8 +32,24 @@ function run(args)
     config.app(c, "forwarder_in", forwarder.MacForwarder, cfg.input.forwarder)
     config.app(c, "forwarder_out", forwarder.MacForwarder, cfg.output.forwarder)
 
-    config.link(c, "link_in.output -> forwarder_out.input")
+    local source = "link_in.output"
+
+    if cfg.rate_limiter then
+        config.app(c, "rate_limiter", rate_limiter.TBRateLimiter, cfg.rate_limiter)
+        config.link(c, source.." -> rate_limiter.input")
+        source = "rate_limiter.output"
+    end
+    
+    if cfg.delay then
+        config.app(c, "delayer", delayer.Delayer5, { delay = cfg.delay, correction = 190000 })
+        config.link(c, source.." -> delayer.input")
+        source = "delayer.output"
+    end
+    
+    config.link(c, source.." -> forwarder_out.input")
     config.link(c, "forwarder_out.output -> link_out.input")
+
+
     config.link(c, "link_out.output -> forwarder_in.input")
     config.link(c, "forwarder_in.output -> link_in.input")
     
@@ -63,16 +75,10 @@ function run(args)
     end
 
     engine.configure(c)
-    local start = engine.now()
     engine.busywait = true
     engine.main({ duration = cfg.duration })
 
-    local stop = engine.now()
     if report_timer ~= nil then
         timer.cancel(report_timer)
-    end
-
-    if cfg.report_file ~= nil then
-        base.report_to_file(cfg.report_file, start, stop)
     end
 end

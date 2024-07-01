@@ -9,6 +9,7 @@ local packet = require("core.packet")
 require("core.packet_h")
 require("program.hybrid_access.base.delay_buffer_h")
 local C = ffi.C
+local min = math.min
 
 Delayer5 = {
     config = {
@@ -41,12 +42,25 @@ function Delayer5:push()
     local iface_in = assert(self.input.input, "<input> (Input) not found")
     local iface_out = assert(self.output.output, "<output> (Output) not found")
 
+    -- forward all packets where the delay is reached
     local current_time = C.get_time_ns()
-    while C.db_peek_time(self.queue) <= current_time do
-        local pkt = C.db_dequeue(self.queue)
-        link.transmit(iface_out, pkt)
+    local max_packets_to_forward = min(C.db_size(self.queue), link.nwritable(iface_out))
+    for _ = 1, max_packets_to_forward do
+        if C.db_peek_time(self.queue) <= current_time then
+            local pkt = C.db_dequeue(self.queue)
+            link.transmit(iface_out, pkt)
+        else
+            break
+        end
     end
 
+    -- discard all packets that dont fit on the link
+    while C.db_peek_time(self.queue) <= current_time do
+        local pkt = C.db_dequeue(self.queue)
+        packet.free(pkt)
+    end
+
+    -- put new packets on the link as long as there is space
     local sending_time = current_time + self.delay
     while not link.empty(iface_in) do
         local p = link.receive(iface_in)
@@ -57,6 +71,7 @@ function Delayer5:push()
         end
     end
 
+    -- discard other incoming packets
     while not link.empty(iface_in) do
         local p = link.receive(iface_in)
         packet.free(p)

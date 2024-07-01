@@ -244,7 +244,7 @@ function run_worker(path, args_str)
         report_timer = setup_report(cfg)
     end
 
-    engine.main()
+    engine.main({ duration = cfg.duration })
 
     if report_timer ~= nil then
         timer.cancel(report_timer)

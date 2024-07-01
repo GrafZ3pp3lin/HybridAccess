@@ -7,6 +7,8 @@ local link = require("core.link")
 local packet = require("core.packet")
 local lib = require("core.lib")
 
+local buffer = require("program.hybrid_access.base.buffer")
+
 local min = math.min
 
 TBRateLimiter = {
@@ -18,7 +20,9 @@ TBRateLimiter = {
         -- initial capacity in bucket (eg 3000)
         initial_capacity = { required = false },
         -- take preamble, start frame delimiter and ipg into account
-        respect_layer1_overhead = { default = false }
+        respect_layer1_overhead = { default = true },
+        -- optional packet buffer
+        buffer_size = { default = 0 },
     }
 }
 
