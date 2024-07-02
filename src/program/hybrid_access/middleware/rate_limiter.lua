@@ -10,6 +10,9 @@ local lib = require("core.lib")
 local buffer = require("program.hybrid_access.base.buffer")
 
 local min = math.min
+local tonumber = tonumber
+local receive, transmit, nreadable, nwritable = link.receive, link.transmit, link.nreadable, link.nwritable
+local free = packet.free
 
 TBRateLimiter = {
     config = {
@@ -44,7 +47,7 @@ function TBRateLimiter:new(conf)
     if conf.buffer_capacity > 0 then
         o.buffer = buffer.PacketBuffer:new(4096)
     end
-    print(string.format("rate limiter: %20s byte/s, %20s capacity", lib.comma_value(o.byte_rate), lib.comma_value(o.bucket_capacity)))
+    print(string.format("rate limiter: %20s byte/s, %20s capacity, %20s buffer", lib.comma_value(o.byte_rate), lib.comma_value(o.bucket_capacity), lib.comma_value(o.buffer_capacity)))
     setmetatable(o, self)
     self.__index = self
     return o
@@ -99,7 +102,7 @@ function TBRateLimiter:push()
             else
                 -- discard packet
                 self.txdrop = self.txdrop + 1
-                packet.free(p)
+                free(p)
             end
         end
 
@@ -115,24 +118,24 @@ end
 
 function TBRateLimiter:send_from_buffer(buffer_size, iface_out)
     -- send from buffer
-    local send_from_buffer = min(buffer_size, link.nwritable(iface_out))
+    local send_from_buffer = min(buffer_size, nwritable(iface_out))
     for _ = 1, send_from_buffer do
         local p = self.buffer:dequeue()
         local length = p.length + self.additional_overhead
         self.buffer_contingent = min(self.buffer_contingent + length, self.buffer_capacity)
-        link.transmit(iface_out, p)
+        transmit(iface_out, p)
     end
 end
 
 function TBRateLimiter:send_from_link(incoming, iface_in, iface_out)
     -- send from buffer
-    local send_from_link = min(incoming, link.nwritable(iface_out))
+    local send_from_link = min(incoming, nwritable(iface_out))
     for _ = 1, send_from_link do
-        local p = link.receive(iface_in)
+        local p = receive(iface_in)
         local length = p.length + self.additional_overhead
         if length <= self.bucket_contingent then
             self.bucket_contingent = self.bucket_contingent - length
-            link.transmit(iface_out, p)
+            transmit(iface_out, p)
         else
             return p
         end
@@ -140,9 +143,9 @@ function TBRateLimiter:send_from_link(incoming, iface_in, iface_out)
 end
 
 function TBRateLimiter:store_in_buffer(iface_in)
-    local incoming = link.nreadable(iface_in)
+    local incoming = nreadable(iface_in)
     for _ = 1, incoming do
-        local p = link.receive(i)
+        local p = receive(iface_in)
         local length = p.length + self.additional_overhead
         if length <= self.buffer_contingent then
             self.buffer_contingent = self.buffer_contingent - length
@@ -150,16 +153,16 @@ function TBRateLimiter:store_in_buffer(iface_in)
         else
             -- discard packet
             self.txdrop = self.txdrop + 1
-            packet.free(p)
+            free(p)
         end
     end
 end
 
 function TBRateLimiter:drop_incoming_packets(iface_in)
-    local incoming = link.nreadable(iface_in)
+    local incoming = nreadable(iface_in)
     for _ = 1, incoming do
-        local p = link.receive(i)
+        local p = receive(iface_in)
         self.txdrop = self.txdrop + 1
-        packet.free(p)
+        free(p)
     end
 end
