@@ -93,19 +93,19 @@ function report_nics()
 end
 
 function resolve_time(time_str)
-    local time_value = time_str.match("^(%d+)ms$")
+    local time_value = string.match(time_str, "^(%d+)ms$")
     if time_value then
         return tonumber(time_value) * 1e6
     end
-    time_value = time_str.match("^(%d+)us$")
+    time_value = string.match(time_str, "^(%d+)us$")
     if time_value then
         return tonumber(time_value) * 1e3
     end
-    time_value = time_str.match("^(%d+)ns$")
+    time_value = string.match(time_str, "^(%d+)ns$")
     if time_value then
         return tonumber(time_value)
     end
-    time_value = time_str.match("^(%d+)s$")
+    time_value = string.match(time_str, "^(%d+)s$")
     if time_value then
         return tonumber(time_value) * 1e9
     end
@@ -113,19 +113,19 @@ function resolve_time(time_str)
 end
 
 function resolve_bandwidth(bandwidth_str)
-    local bandwidth_value = bandwidth_str.match("^(%d+)gbit$")
+    local bandwidth_value = string.match(bandwidth_str, "^(%d+)gbit$")
     if bandwidth_value then
         return tonumber(bandwidth_value) * 1e9
     end
-    bandwidth_value = bandwidth_str.match("^(%d+)mbit$")
+    bandwidth_value = string.match(bandwidth_str, "^(%d+)mbit$")
     if bandwidth_value then
         return tonumber(bandwidth_value) * 1e6
     end
-    bandwidth_value = bandwidth_str.match("^(%d+)kbit$")
+    bandwidth_value = string.match(bandwidth_str, "^(%d+)kbit$")
     if bandwidth_value then
         return tonumber(bandwidth_value) * 1e3
     end
-    bandwidth_value = bandwidth_str.match("^(%d+)bit$")
+    bandwidth_value = string.match(bandwidth_str, "^(%d+)bit$")
     if bandwidth_value then
         return tonumber(bandwidth_value)
     end
