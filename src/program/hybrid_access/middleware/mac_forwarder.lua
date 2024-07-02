@@ -5,7 +5,7 @@ local link = require("core.link")
 local ethernet = require("lib.protocol.ethernet")
 
 local copy = ffi.copy
-local receive, transmit, nreadable = link.receive, link.transmit, link.nreadable
+local receive, transmit, empty = link.receive, link.transmit, link.empty
 
 MacForwarder = {}
 MacForwarder.config = {
@@ -32,10 +32,13 @@ function MacForwarder:push()
     local input = assert(self.input.input, "input port not found")
     local output = assert(self.output.output, "output port not found")
 
-    local incoming = nreadable(input)
-    for _ = 1, incoming do
+    while not empty(input) do
         local p = receive(input)
         copy(p.data, self.header_addr, 12)
         transmit(output, p)
     end
+
+    -- local incoming = nreadable(input)
+    -- for _ = 1, incoming do
+    -- end
 end
