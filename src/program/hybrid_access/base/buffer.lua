@@ -42,7 +42,7 @@ function PacketBuffer:dequeue()
 end
 
 function PacketBuffer:enqueue(pkt)
-    if self:full() then
+    if self:is_full() then
         return 0
     end
     self.buffer[self.write] = pkt;
