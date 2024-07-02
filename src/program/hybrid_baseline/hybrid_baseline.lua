@@ -13,13 +13,41 @@ local rate_limiter = require("program.hybrid_access.middleware.rate_limiter")
 local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
 
+local function parse_cli(str, cfg)
+    local overwrites = {};
+    
+    for i in string.gmatch(str, "([^;]+)") do
+        local k, v = string.match(i, "^-(%w+)=\"?(%w+)\"?$")
+        if k and v then
+            overwrites[k] = v
+        end
+    end
+    
+    for key, value in pairs(overwrites) do
+        if key == "d" or key == "delay" then
+            cfg.delayer.delay = base.resolve_time(value)
+        elseif key == "r" or key == "rate" then
+            cfg.rate_limiter.rate = base.resolve_bandwidth(value)
+        elseif key == "c" or key == "capacity" then
+            cfg.rate_limiter.bucket_capacity = tonumber(value)
+        elseif key == "b" or key == "buffer" then
+            cfg.rate_limiter.buffer_capacity = tonumber(value)
+        end
+    end
+end
+
 function run(args)
-    if #args ~= 1 then
+    if #args == 0 then
         error("please provide config path")
     end
     
     local path = args[1]
+    local rest = table.concat(args, ";", 2)
+
     local cfg = ini.Ini:parse(path)
+    parse_cli(rest, cfg)
+
+    print(base.dump(cfg))
 
     local c = config.new()
 
