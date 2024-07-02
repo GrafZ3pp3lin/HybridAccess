@@ -45,7 +45,7 @@ function TBRateLimiter:new(conf)
         o.additional_overhead = 7 + 1 + 4 + 12
     end
     if conf.buffer_capacity > 0 then
-        o.buffer = buffer.PacketBuffer:new(4096)
+        o.buffer = buffer.PacketBuffer:new(65536)
     end
     print(string.format("rate limiter: %20s byte/s, %20s capacity, %20s buffer", lib.comma_value(o.byte_rate), lib.comma_value(o.bucket_capacity), lib.comma_value(o.buffer_capacity)))
     setmetatable(o, self)

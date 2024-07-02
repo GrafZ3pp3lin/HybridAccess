@@ -1,6 +1,6 @@
 enum
 {
-  DELAY_BUFFER_SIZE = 256 * 1024
+  DELAY_BUFFER_SIZE = 512 * 1024
 };
 
 struct timed_packet
