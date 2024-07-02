@@ -32,11 +32,10 @@ function MacForwarder:push()
     local input = assert(self.input.input, "input port not found")
     local output = assert(self.output.output, "output port not found")
 
-    local header = self.header_addr
     local incoming = nreadable(input)
     for _ = 1, incoming do
         local p = receive(input)
-        copy(p.data, header, 12)
+        copy(p.data, self.header_addr, 12)
         transmit(output, p)
     end
 end
