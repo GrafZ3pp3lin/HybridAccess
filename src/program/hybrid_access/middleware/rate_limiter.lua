@@ -22,7 +22,7 @@ TBRateLimiter = {
         -- take preamble, start frame delimiter and ipg into account
         respect_layer1_overhead = { default = true },
         -- optional packet buffer
-        buffer_size = { default = 0 },
+        buffer_capacity = { default = 0 },
     }
 }
 
@@ -32,12 +32,17 @@ function TBRateLimiter:new(conf)
     {
         byte_rate = math.floor(conf.rate / 8),
         bucket_capacity = conf.bucket_capacity,
-        contingent = conf.initial_capacity,
+        bucket_contingent = conf.initial_capacity,
+        buffer_capacity = conf.buffer_capacity,
+        buffer_contingent = conf.buffer_capacity,
         additional_overhead = 0,
         txdrop = 0
     }
     if conf.respect_layer1_overhead == true then
         o.additional_overhead = 7 + 1 + 4 + 12
+    end
+    if conf.buffer_capacity > 0 then
+        o.buffer = buffer.PacketBuffer:new(4096)
     end
     print(string.format("rate limiter: %20s byte/s, %20s capacity", lib.comma_value(o.byte_rate), lib.comma_value(o.bucket_capacity)))
     setmetatable(o, self)
@@ -55,38 +60,104 @@ function TBRateLimiter:report()
 end
 
 function TBRateLimiter:push()
-    local i = assert(self.input.input, "input port not found")
-    local o = assert(self.output.output, "output port not found")
+    local iface_in = assert(self.input.input, "input port not found")
+    local iface_out = assert(self.output.output, "output port not found")
 
-    if link.empty(i) then
+    -- check if packets exists - otherwise return here
+    local buffer_size = 0
+    if self.buffer then
+        buffer_size = self.buffer:size()
+    end
+    local incoming = link.nreadable(iface_in)
+    if incoming == 0 and buffer_size == 0 then
         return
     end
 
+    -- fill up bucket
     local cur_now = tonumber(engine.now())
     local last_time = self.last_time or cur_now
     local interval = cur_now - last_time
-    self.contingent = min(
-        self.contingent + self.byte_rate * interval,
+    self.bucket_contingent = min(
+        self.bucket_contingent + self.byte_rate * interval,
         self.bucket_capacity
     )
     self.last_time = cur_now
 
-    for _ = 1, link.nreadable(i) do
+    -- send packets from buffer
+    if buffer_size > 0 then
+        self:send_from_buffer(buffer_size, iface_out)
+    end
+
+    -- receive packets from link
+    if incoming > 0 then
+        local p = self:send_from_link(incoming, iface_in, iface_out) -- returns optional packet from link that can not be forwarded
+        if p then
+            local length = p.length + self.additional_overhead
+            if length <= self.buffer_contingent then
+                self.buffer_contingent = self.buffer_contingent - length
+                self.buffer:enqueue(p)
+            else
+                -- discard packet
+                self.txdrop = self.txdrop + 1
+                packet.free(p)
+            end
+        end
+
+        -- store incoming packets in buffer
+        if self.buffer_contingent > 0 then
+            self:store_in_buffer(iface_in)
+        end
+
+        -- discard all remaining/out of band packets
+        self:drop_incoming_packets(iface_in)
+    end
+end
+
+function TBRateLimiter:send_from_buffer(buffer_size, iface_out)
+    -- send from buffer
+    local send_from_buffer = min(buffer_size, link.nwritable(iface_out))
+    for _ = 1, send_from_buffer do
+        local p = self.buffer:dequeue()
+        local length = p.length + self.additional_overhead
+        self.buffer_contingent = min(self.buffer_contingent + length, self.buffer_capacity)
+        link.transmit(iface_out, p)
+    end
+end
+
+function TBRateLimiter:send_from_link(incoming, iface_in, iface_out)
+    -- send from buffer
+    local send_from_link = min(incoming, link.nwritable(iface_out))
+    for _ = 1, send_from_link do
+        local p = link.receive(iface_in)
+        local length = p.length + self.additional_overhead
+        if length <= self.bucket_contingent then
+            self.bucket_contingent = self.bucket_contingent - length
+            link.transmit(iface_out, p)
+        else
+            return p
+        end
+    end
+end
+
+function TBRateLimiter:store_in_buffer(iface_in)
+    local incoming = link.nreadable(iface_in)
+    for _ = 1, incoming do
         local p = link.receive(i)
         local length = p.length + self.additional_overhead
-
-        if length <= self.contingent then
-            self.contingent = self.contingent - length
-            link.transmit(o, p)
+        if length <= self.buffer_contingent then
+            self.buffer_contingent = self.buffer_contingent - length
+            self.buffer:enqueue(p)
         else
             -- discard packet
             self.txdrop = self.txdrop + 1
             packet.free(p)
-            break
         end
     end
-    for _ = 1, link.nreadable(i) do
-        -- discard rest of packages
+end
+
+function TBRateLimiter:drop_incoming_packets(iface_in)
+    local incoming = link.nreadable(iface_in)
+    for _ = 1, incoming do
         local p = link.receive(i)
         self.txdrop = self.txdrop + 1
         packet.free(p)

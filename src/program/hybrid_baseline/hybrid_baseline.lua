@@ -40,8 +40,8 @@ function run(args)
         source = "rate_limiter.output"
     end
     
-    if cfg.delay then
-        config.app(c, "delayer", delayer.Delayer5, { delay = cfg.delay, correction = 190000 })
+    if cfg.delayer then
+        config.app(c, "delayer", delayer.Delayer5, cfg.delayer)
         config.link(c, source.." -> delayer.input")
         source = "delayer.output"
     end

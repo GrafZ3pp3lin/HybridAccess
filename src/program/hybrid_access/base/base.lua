@@ -91,3 +91,43 @@ function report_nics()
         end
     end
 end
+
+function resolve_time(time_str)
+    local time_value = time_str.match("^(%d+)ms$")
+    if time_value then
+        return tonumber(time_value) * 1e6
+    end
+    time_value = time_str.match("^(%d+)us$")
+    if time_value then
+        return tonumber(time_value) * 1e3
+    end
+    time_value = time_str.match("^(%d+)ns$")
+    if time_value then
+        return tonumber(time_value)
+    end
+    time_value = time_str.match("^(%d+)s$")
+    if time_value then
+        return tonumber(time_value) * 1e9
+    end
+    return tonumber(time_str)
+end
+
+function resolve_bandwidth(bandwidth_str)
+    local bandwidth_value = bandwidth_str.match("^(%d+)gbit$")
+    if bandwidth_value then
+        return tonumber(bandwidth_value) * 1e9
+    end
+    bandwidth_value = bandwidth_str.match("^(%d+)mbit$")
+    if bandwidth_value then
+        return tonumber(bandwidth_value) * 1e6
+    end
+    bandwidth_value = bandwidth_str.match("^(%d+)kbit$")
+    if bandwidth_value then
+        return tonumber(bandwidth_value) * 1e3
+    end
+    bandwidth_value = bandwidth_str.match("^(%d+)bit$")
+    if bandwidth_value then
+        return tonumber(bandwidth_value)
+    end
+    return tonumber(bandwidth_str)
+end
