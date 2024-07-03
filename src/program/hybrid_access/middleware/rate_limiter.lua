@@ -73,7 +73,7 @@ function TBRateLimiter:push()
 
     -- check if packets exists - otherwise return here
     local buffer_size = 0
-    if self.buffer then
+    if self.buffer ~= nil then
         buffer_size = self.buffer:size()
     end
     local incoming = link.nreadable(iface_in)
@@ -126,9 +126,10 @@ function TBRateLimiter:send_from_buffer(buffer_size, iface_out)
     -- send from buffer
     local send_from_buffer = min(buffer_size, nwritable(iface_out))
     for _ = 1, send_from_buffer do
-        local p = self.buffer:dequeue()
-        self.buffer_contingent = self.buffer_contingent + p.length + self.additional_overhead
-        transmit(iface_out, p)
+        local pkt = self.buffer:dequeue()
+        local length = pkt.length + self.additional_overhead
+        self.buffer_contingent = self.buffer_contingent + length
+        transmit(iface_out, pkt)
     end
 end
 

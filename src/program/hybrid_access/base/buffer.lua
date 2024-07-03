@@ -46,7 +46,7 @@ function PacketBuffer:enqueue(pkt)
         return 0
     end
     self.buffer[self.write] = pkt;
-    self.write = band(self.write, self.max + 1)
+    self.write = band(self.write, self.max - 1)
 
     return 1;
 end
