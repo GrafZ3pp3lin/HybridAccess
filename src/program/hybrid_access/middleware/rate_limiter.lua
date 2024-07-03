@@ -39,8 +39,7 @@ function TBRateLimiter:new(conf)
         buffer_capacity = conf.buffer_capacity,
         buffer_contingent = conf.buffer_capacity,
         additional_overhead = 0,
-        txdrop = 0,
-        txbuffer = 0
+        txdrop = 0
     }
     if conf.respect_layer1_overhead == true then
         o.additional_overhead = 7 + 1 + 4 + 12
@@ -61,7 +60,6 @@ function TBRateLimiter:report()
     print(string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)))
     print(string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)))
     print(string.format("%20s dropped", lib.comma_value(self.txdrop)))
-    print(string.format("%20s buffered total", lib.comma_value(self.txbuffer)))
     print(string.format("%20s buffered current", lib.comma_value(self.buffer:size())))
     print(string.format("%20s buffer contingent", lib.comma_value(self.buffer_contingent)))
     print(string.format("%20s bucket contingent", lib.comma_value(self.bucket_contingent)))
@@ -98,19 +96,7 @@ function TBRateLimiter:push()
 
     -- receive packets from link
     if incoming > 0 then
-        local p = self:send_from_link(incoming, iface_in, iface_out) -- returns optional packet from link that can not be forwarded
-        if p then
-            local length = p.length + self.additional_overhead
-            if length <= self.buffer_contingent then
-                self.buffer_contingent = self.buffer_contingent - length
-                self.buffer:enqueue(p)
-                self.txbuffer = self.txbuffer + 1
-            else
-                -- discard packet
-                self.txdrop = self.txdrop + 1
-                free(p)
-            end
-        end
+        self:send_from_link(incoming, iface_in, iface_out)
 
         -- store incoming packets in buffer
         if self.buffer_contingent > 0 then
@@ -126,10 +112,14 @@ function TBRateLimiter:send_from_buffer(buffer_size, iface_out)
     -- send from buffer
     local send_from_buffer = min(buffer_size, nwritable(iface_out))
     for _ = 1, send_from_buffer do
-        local pkt = self.buffer:dequeue()
-        local length = pkt.length + self.additional_overhead
-        self.buffer_contingent = self.buffer_contingent + length
-        transmit(iface_out, pkt)
+        local p = self.buffer:peek()
+        local length = p.length + self.additional_overhead
+        if length <= self.bucket_contingent then
+            self.buffer:dequeue()
+            self.bucket_contingent = self.bucket_contingent - length
+            self.buffer_contingent = self.buffer_contingent + length
+            transmit(iface_out, p)
+        end
     end
 end
 
@@ -142,8 +132,14 @@ function TBRateLimiter:send_from_link(incoming, iface_in, iface_out)
         if length <= self.bucket_contingent then
             self.bucket_contingent = self.bucket_contingent - length
             transmit(iface_out, p)
+        elseif length <= self.buffer_contingent then
+            -- check if packet can be buffered
+            self.buffer_contingent = self.buffer_contingent - length
+            self.buffer:enqueue(p)
         else
-            return p
+            -- discard packet
+            self.txdrop = self.txdrop + 1
+            free(p)
         end
     end
 end
@@ -154,9 +150,9 @@ function TBRateLimiter:store_in_buffer(iface_in)
         local p = receive(iface_in)
         local length = p.length + self.additional_overhead
         if length <= self.buffer_contingent then
+            -- check if packet can be buffered
             self.buffer_contingent = self.buffer_contingent - length
             self.buffer:enqueue(p)
-            self.txbuffer = self.txbuffer + 1
         else
             -- discard packet
             self.txdrop = self.txdrop + 1

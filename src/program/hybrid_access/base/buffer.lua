@@ -42,6 +42,12 @@ function PacketBuffer:dequeue()
     return pkt;
 end
 
+function PacketBuffer:peek()
+    -- assert not empty
+    local pkt = self.buffer[self.read]
+    return pkt;
+end
+
 function PacketBuffer:enqueue(pkt)
     if self:is_full() then
         return 0
