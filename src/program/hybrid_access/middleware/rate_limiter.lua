@@ -39,7 +39,8 @@ function TBRateLimiter:new(conf)
         buffer_capacity = conf.buffer_capacity,
         buffer_contingent = conf.buffer_capacity,
         additional_overhead = 0,
-        txdrop = 0
+        txdrop = 0,
+        txbuffer = 0
     }
     if conf.respect_layer1_overhead == true then
         o.additional_overhead = 7 + 1 + 4 + 12
@@ -60,6 +61,8 @@ function TBRateLimiter:report()
     print(string.format("%20s # / %20s b in", lib.comma_value(input_stats.txpackets), lib.comma_value(input_stats.txbytes)))
     print(string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets), lib.comma_value(output_stats.txbytes)))
     print(string.format("%20s dropped", lib.comma_value(self.txdrop)))
+    print(string.format("%20s buffered total", lib.comma_value(self.txbuffer)))
+    print(string.format("%20s buffered current", lib.comma_value(self.buffer:size())))
 end
 
 function TBRateLimiter:push()
@@ -99,6 +102,7 @@ function TBRateLimiter:push()
             if length <= self.buffer_contingent then
                 self.buffer_contingent = self.buffer_contingent - length
                 self.buffer:enqueue(p)
+                self.txbuffer = self.txbuffer + 1
             else
                 -- discard packet
                 self.txdrop = self.txdrop + 1
@@ -150,6 +154,7 @@ function TBRateLimiter:store_in_buffer(iface_in)
         if length <= self.buffer_contingent then
             self.buffer_contingent = self.buffer_contingent - length
             self.buffer:enqueue(p)
+            self.txbuffer = self.txbuffer + 1
         else
             -- discard packet
             self.txdrop = self.txdrop + 1
