@@ -37,7 +37,7 @@ end
 
 function PacketBuffer:dequeue()
     -- assert not empty
-    local pkt = self.buf[self.read]
+    local pkt = self.buffer[self.read]
     self.read = band(self.read + 1, self.max_pkt)
     return pkt;
 end
