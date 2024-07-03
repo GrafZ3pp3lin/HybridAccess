@@ -9,7 +9,7 @@ local lib = require("core.lib")
 
 local buffer = require("program.hybrid_access.base.buffer")
 
-local min = math.min
+local min, ceil = math.min, math.ceil
 local tonumber = tonumber
 local receive, transmit, nreadable, nwritable = link.receive, link.transmit, link.nreadable, link.nwritable
 local free = packet.free
@@ -86,7 +86,7 @@ function TBRateLimiter:push()
     local last_time = self.last_time or cur_now
     local interval = cur_now - last_time
     self.bucket_contingent = min(
-        self.bucket_contingent + self.byte_rate * interval,
+        self.bucket_contingent + ceil(self.byte_rate * interval),
         self.bucket_capacity
     )
     self.last_time = cur_now
@@ -127,8 +127,7 @@ function TBRateLimiter:send_from_buffer(buffer_size, iface_out)
     local send_from_buffer = min(buffer_size, nwritable(iface_out))
     for _ = 1, send_from_buffer do
         local p = self.buffer:dequeue()
-        local length = p.length + self.additional_overhead
-        self.buffer_contingent = min(self.buffer_contingent + length, self.buffer_capacity)
+        self.buffer_contingent = self.buffer_contingent + p.length + self.additional_overhead
         transmit(iface_out, p)
     end
 end
