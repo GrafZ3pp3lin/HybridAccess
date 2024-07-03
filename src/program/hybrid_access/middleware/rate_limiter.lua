@@ -63,6 +63,8 @@ function TBRateLimiter:report()
     print(string.format("%20s dropped", lib.comma_value(self.txdrop)))
     print(string.format("%20s buffered total", lib.comma_value(self.txbuffer)))
     print(string.format("%20s buffered current", lib.comma_value(self.buffer:size())))
+    print(string.format("%20s buffer contingent", lib.comma_value(self.buffer_contingent)))
+    print(string.format("%20s bucket contingent", lib.comma_value(self.bucket_contingent)))
 end
 
 function TBRateLimiter:push()
