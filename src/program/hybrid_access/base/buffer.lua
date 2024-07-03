@@ -16,7 +16,8 @@ function PacketBuffer:new(size)
         buffer = buf,
         read = 0,
         write = 0,
-        max = size
+        max = size,
+        max_pkt = size - 1,
     }
     setmetatable(o, self)
     self.__index = self
@@ -31,13 +32,13 @@ function PacketBuffer:size()
 end
 
 function PacketBuffer:is_full()
-    return band(self.write + 1, self.max - 1) == self.read;
+    return band(self.write + 1, self.max_pkt) == self.read;
 end
 
 function PacketBuffer:dequeue()
     -- assert not empty
     local pkt = self.buf[self.read]
-    self.read = band(self.read + 1, self.max - 1)
+    self.read = band(self.read + 1, self.max_pkt)
     return pkt;
 end
 
@@ -46,7 +47,7 @@ function PacketBuffer:enqueue(pkt)
         return 0
     end
     self.buffer[self.write] = pkt;
-    self.write = band(self.write, self.max - 1)
+    self.write = band(self.write + 1, self.max_pkt)
 
     return 1;
 end
