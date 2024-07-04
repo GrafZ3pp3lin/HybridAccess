@@ -25,13 +25,23 @@ local function parse_cli(str, cfg)
     
     for key, value in pairs(overwrites) do
         if key == "d" or key == "delay" then
-            cfg.delayer.delay = base.resolve_time(value)
+            if value == "off" then
+                cfg.delayer = nil
+            else
+                cfg.delayer.delay = base.resolve_time(value)
+            end
+        elseif key == "dc" or key == "delay_corr" and cfg.delayer ~= nil then
+            cfg.delayer.correction = base.resolve_time(value)
         elseif key == "r" or key == "rate" then
-            cfg.rate_limiter.rate = base.resolve_bandwidth(value)
-        elseif key == "c" or key == "capacity" then
-            cfg.rate_limiter.bucket_capacity = tonumber(value)
-        elseif key == "b" or key == "buffer" then
-            cfg.rate_limiter.buffer_capacity = tonumber(value)
+            if value == "off" then
+                cfg.rate_limiter = nil
+            else
+                cfg.rate_limiter.rate = base.resolve_bandwidth(value)
+            end
+        elseif key == "c" or key == "capacity" and cfg.rate_limiter ~= nil then
+            cfg.rate_limiter.bucket_capacity = base.resolve_number(value)
+        elseif key == "b" or key == "buffer" and cfg.rate_limiter ~= nil then
+            cfg.rate_limiter.buffer_capacity = base.resolve_number(value)
         end
     end
 end
@@ -62,13 +72,13 @@ function run(args)
 
     local source = "link_in.output"
 
-    if cfg.rate_limiter then
+    if cfg.rate_limiter ~= nil then
         config.app(c, "rate_limiter", rate_limiter.TBRateLimiter, cfg.rate_limiter)
         config.link(c, source.." -> rate_limiter.input")
         source = "rate_limiter.output"
     end
     
-    if cfg.delayer then
+    if cfg.delayer ~= nil then
         config.app(c, "delayer", delayer.Delayer5, cfg.delayer)
         config.link(c, source.." -> delayer.input")
         source = "delayer.output"
