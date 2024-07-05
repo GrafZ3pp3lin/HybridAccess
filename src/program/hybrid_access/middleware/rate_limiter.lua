@@ -14,28 +14,35 @@ local tonumber = tonumber
 local receive, transmit, nreadable, nwritable = link.receive, link.transmit, link.nreadable, link.nwritable
 local free = packet.free
 
+local QUEUE_LENGTH = 16384
+
 TBRateLimiter = {
     config = {
         -- bits per second
         rate             = { required = true },
         -- bucket capacity in byte (default 5000)
         bucket_capacity  = { default = 5000 },
-        -- initial capacity in bucket (eg 3000)
-        initial_capacity = { required = false },
         -- take preamble, start frame delimiter and ipg into account
         respect_layer1_overhead = { default = true },
         -- optional packet buffer
-        buffer_capacity = { default = 0 },
+        buffer_capacity = { required = false },
+        -- optional how much latency the buffer can cause in ns
+        buffer_latency = { required = false }
     }
 }
 
 function TBRateLimiter:new(conf)
-    conf.initial_capacity = conf.initial_capacity or conf.bucket_capacity
+    assert(conf.buffer_capacity == nil or conf.buffer_latency == nil, "Buffer capacity and latency are exclusive")
+    local byte_rate = math.floor(conf.rate / 8)
+    if conf.buffer_latency ~= nil then
+        conf.buffer_capacity = math.floor(byte_rate * (conf.buffer_latency / 1e9))
+    end
+    assert(conf.buffer_capacity < QUEUE_LENGTH * 1500, "buffer length is too high")
     local o =
     {
-        byte_rate = math.floor(conf.rate / 8),
+        byte_rate = byte_rate,
         bucket_capacity = conf.bucket_capacity,
-        bucket_contingent = conf.initial_capacity,
+        bucket_contingent = conf.bucket_capacity,
         buffer_capacity = conf.buffer_capacity,
         buffer_contingent = conf.buffer_capacity,
         additional_overhead = 0,
@@ -45,7 +52,7 @@ function TBRateLimiter:new(conf)
         o.additional_overhead = 7 + 1 + 4 + 12
     end
     if conf.buffer_capacity > 0 then
-        o.buffer = buffer.PacketBuffer:new(65536) -- 16384
+        o.buffer = buffer.PacketBuffer:new(QUEUE_LENGTH)
     end
     print(string.format("rate limiter: %20s byte/s, %20s capacity, %20s buffer", lib.comma_value(o.byte_rate), lib.comma_value(o.bucket_capacity), lib.comma_value(o.buffer_capacity)))
     setmetatable(o, self)

@@ -34,7 +34,7 @@ v0 ── v1                v1 ── v0
 Commands:
 ping 10.0.100.11 -I 10.0.100.1
 ./iperf3-3.17.1/src/iperf3 -c 10.0.100.11 -B 10.0.100.1 -i 1 -t 120 -O 60 -M 1448 -w 128M
-./iperf-3.17.1/src/iperf3 -s -B 10.0.100.11
+./iperf-3.17.1/src/iperf3 -s -B 10.0.100.11 -J
 
 sudo ip link set dev enp2s13 up
 sudo ip addr add 10.0.100.1/24 dev enp2s13
@@ -60,3 +60,12 @@ sudo tc qdisc add dev enp2s15 parent 1:1 handle 10:0 netem delay 5ms
 sudo ip link set dev enp2s13 up
 sudo ip addr add 10.0.100.11/24 dev enp2s13
 sudo arp -s 10.0.100.1 3e:bd:17:df:2a:54
+
+
+tbf:
+5G:  128 / 128
+10G: 256 / 256
+
+snapp:
+5G:  8M  / 8M
+10G: 32M / 32M

@@ -42,6 +42,8 @@ local function parse_cli(str, cfg)
             cfg.rate_limiter.bucket_capacity = base.resolve_number(value)
         elseif key == "b" or key == "buffer" and cfg.rate_limiter ~= nil then
             cfg.rate_limiter.buffer_capacity = base.resolve_number(value)
+        elseif key == "l" or key == "latency" and cfg.rate_limiter ~= nil then
+            cfg.rate_limiter.buffer_latency = base.resolve_time(value)
         end
     end
 end
