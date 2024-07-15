@@ -45,7 +45,7 @@ local function parse_cli(str, cfg)
         elseif key == "l" or key == "latency" and cfg.rate_limiter ~= nil then
             cfg.rate_limiter.buffer_latency = base.resolve_time(value)
         elseif key == "o" or key == "overhead" and cfg.rate_limiter ~= nil then
-            cfg.respect_layer1_overhead = base.resolve_bool(value)
+            cfg.rate_limiter.respect_layer1_overhead = base.resolve_bool(value)
         end
     end
 end

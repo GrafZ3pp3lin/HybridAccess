@@ -154,10 +154,5 @@ end
 function resolve_bool(bool_str)
     local lower_bool_str = string.lower(bool_str)
     local bool_value = string.match(lower_bool_str, "^(yes|y|1|on|true)$")
-    print(bool_value)
-    if bool_value then
-        return true
-    else
-        return false
-    end
+    return bool_value ~= nil
 end
