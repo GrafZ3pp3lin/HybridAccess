@@ -152,7 +152,6 @@ function resolve_number(number_str)
 end
 
 function resolve_bool(bool_str)
-    local lower_bool_str = string.lower(bool_str)
-    local bool_value = string.match(lower_bool_str, "^(yes|y|1|on|true)$")
-    return bool_value ~= nil
+    local s = string.lower(bool_str)
+    return s == "yes" or s == "y" or s == "1" or s == "on" or s == "true"
 end
