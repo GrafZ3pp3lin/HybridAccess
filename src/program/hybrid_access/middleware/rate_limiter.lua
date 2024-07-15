@@ -22,8 +22,10 @@ TBRateLimiter = {
         rate             = { required = true },
         -- bucket capacity in byte (default 5000)
         bucket_capacity  = { default = 5000 },
-        -- take preamble, start frame delimiter and ipg into account
-        respect_layer1_overhead = { default = true },
+        -- additional overhead per packet
+        additional_overhead = { required = false },
+        -- use layer 1 overhead
+        layer1_overhead = { default = true },
         -- optional packet buffer
         buffer_capacity = { required = false },
         -- optional how much latency the buffer can cause in ns
@@ -48,13 +50,15 @@ function TBRateLimiter:new(conf)
         additional_overhead = 0,
         txdrop = 0
     }
-    if conf.respect_layer1_overhead == true then
+    if conf.layer1_overhead == true and conf.additional_overhead == nil then
         o.additional_overhead = 7 + 1 + 4 + 12
+    elseif conf.additional_overhead ~= nil then
+        o.additional_overhead = conf.additional_overhead
     end
     if conf.buffer_capacity > 0 then
         o.buffer = buffer.PacketBuffer:new(QUEUE_LENGTH)
     end
-    print(string.format("rate limiter: %20s byte/s, %20s capacity, %20s buffer, layer1 overhead %s", lib.comma_value(o.byte_rate), lib.comma_value(o.bucket_capacity), lib.comma_value(o.buffer_capacity), lib.yesno(conf.respect_layer1_overhead)))
+    print(string.format("rate limiter: %20s byte/s, %20s capacity, %20s buffer, additional overhead %i", lib.comma_value(o.byte_rate), lib.comma_value(o.bucket_capacity), lib.comma_value(o.buffer_capacity), lib.comma_value(o.additional_overhead)))
     setmetatable(o, self)
     self.__index = self
     return o
