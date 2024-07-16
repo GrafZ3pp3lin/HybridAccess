@@ -50,10 +50,10 @@ function TBRateLimiter:new(conf)
         additional_overhead = 0,
         txdrop = 0
     }
-    if conf.layer1_overhead == true and conf.additional_overhead == nil then
-        o.additional_overhead = 7 + 1 + 4 + 12
-    elseif conf.additional_overhead ~= nil then
+    if conf.additional_overhead ~= nil then
         o.additional_overhead = conf.additional_overhead
+    elseif conf.layer1_overhead == true then
+        o.additional_overhead = 7 + 1 + 4 + 12
     end
     if conf.buffer_capacity > 0 then
         o.buffer = buffer.PacketBuffer:new(QUEUE_LENGTH)

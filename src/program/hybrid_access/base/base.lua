@@ -117,17 +117,17 @@ function resolve_bandwidth(bandwidth_str)
     local lower_bandwidth_str = string.lower(bandwidth_str)
     local bandwidth_value = string.match(lower_bandwidth_str, "^(%d+)gbit$")
     if bandwidth_value then
-        return tonumber(bandwidth_value) * 1024 * 1024 * 1024
+        return tonumber(bandwidth_value) * 1e9
     end
     bandwidth_value = string.match(lower_bandwidth_str, "^(%d+)mbit$")
     if bandwidth_value then
-        return tonumber(bandwidth_value) * 1024 * 1024
+        return tonumber(bandwidth_value) * 1e6
     end
     bandwidth_value = string.match(lower_bandwidth_str, "^(%d+)kbit$")
     if bandwidth_value then
-        return tonumber(bandwidth_value) * 1024
+        return tonumber(bandwidth_value) * 1e3
     end
-    bandwidth_value = string.match(lower_bandwidth_str, "^(%d+)vit$")
+    bandwidth_value = string.match(lower_bandwidth_str, "^(%d+)bit$")
     if bandwidth_value then
         return tonumber(bandwidth_value)
     end
