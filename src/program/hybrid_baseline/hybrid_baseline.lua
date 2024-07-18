@@ -60,12 +60,14 @@ local function configure_middleware(m_type, c, cfg, source)
         if cfg.rate_limiter ~= nil then
             config.app(c, "rate_limiter", rate_limiter.TBRateLimiter, cfg.rate_limiter)
             config.link(c, source.." -> rate_limiter.input")
+            print(source.." -> rate_limiter.input")
             out_source = "rate_limiter.output"
         end
     elseif m_type == "d" or m_type == "delayer" then
         if cfg.delayer ~= nil then
             config.app(c, "delayer", delayer.Delayer5, cfg.delayer)
             config.link(c, source.." -> delayer.input")
+            print(source.." -> delayer.input")
             out_source = "delayer.output"
         end
     end
@@ -107,7 +109,7 @@ function run(args)
     
     config.link(c, source.." -> forwarder_out.input")
     config.link(c, "forwarder_out.output -> link_out.input")
-
+    print(source.." -> forwarder_out.input")
 
     config.link(c, "link_out.output -> forwarder_in.input")
     config.link(c, "forwarder_in.output -> link_in.input")
