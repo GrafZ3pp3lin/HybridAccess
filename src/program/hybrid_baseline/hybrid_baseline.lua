@@ -24,7 +24,9 @@ local function parse_cli(str, cfg)
     end
     
     for key, value in pairs(overwrites) do
-        if key == "d" or key == "delay" then
+        if key == "order" then
+            cfg.order = value
+        elseif key == "d" or key == "delay" then
             if value == "off" then
                 cfg.delayer = nil
             else
@@ -50,6 +52,25 @@ local function parse_cli(str, cfg)
             cfg.rate_limiter.layer1_overhead = base.resolve_bool(value)
         end
     end
+end
+
+local function configure_middleware(m_type, c, cfg, source)
+    local out_source = source
+    if m_type == "r" or m_type == "rate_limiter" then
+        if cfg.rate_limiter ~= nil then
+            config.app(c, "rate_limiter", rate_limiter.TBRateLimiter, cfg.rate_limiter)
+            config.link(c, source.." -> rate_limiter.input")
+            out_source = "rate_limiter.output"
+        end
+    elseif m_type == "d" or m_type == "delayer" then
+        if cfg.delayer ~= nil then
+            config.app(c, "delayer", delayer.Delayer5, cfg.delayer)
+            config.link(c, source.." -> delayer.input")
+            out_source = "delayer.output"
+        end
+    end
+    
+    return out_source
 end
 
 function run(args)
@@ -78,16 +99,10 @@ function run(args)
 
     local source = "link_in.output"
 
-    if cfg.rate_limiter ~= nil then
-        config.app(c, "rate_limiter", rate_limiter.TBRateLimiter, cfg.rate_limiter)
-        config.link(c, source.." -> rate_limiter.input")
-        source = "rate_limiter.output"
-    end
-    
-    if cfg.delayer ~= nil then
-        config.app(c, "delayer", delayer.Delayer5, cfg.delayer)
-        config.link(c, source.." -> delayer.input")
-        source = "delayer.output"
+    if cfg.order ~= nil then
+        for middleware in string.gmatch(cfg.order, "[^,]+") do
+            source = configure_middleware(middleware, c, cfg, source)
+        end
     end
     
     config.link(c, source.." -> forwarder_out.input")
