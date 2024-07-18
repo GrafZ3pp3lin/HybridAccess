@@ -102,7 +102,7 @@ function run(args)
     local source = "link_in.output"
 
     if cfg.order ~= nil then
-        for middleware in string.gmatch(cfg.order, "[^,]+") do
+        for middleware in string.gmatch(cfg.order, "[^+]+") do
             source = configure_middleware(middleware, c, cfg, source)
         end
     end
