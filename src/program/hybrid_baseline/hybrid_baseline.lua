@@ -17,7 +17,7 @@ local function parse_cli(str, cfg)
     local overwrites = {};
     
     for i in string.gmatch(str, "([^;]+)") do
-        local k, v = string.match(i, "^-(%w+)=\"?(%w+)\"?$")
+        local k, v = string.match(i, "^-(%w+)=\"?([%w,]+)\"?$")
         if k and v then
             overwrites[k] = v
         end
@@ -102,7 +102,7 @@ function run(args)
     local source = "link_in.output"
 
     if cfg.order ~= nil then
-        for middleware in string.gmatch(cfg.order, "[^+]+") do
+        for middleware in string.gmatch(cfg.order, "[^,]+") do
             source = configure_middleware(middleware, c, cfg, source)
         end
     end
