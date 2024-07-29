@@ -1,7 +1,9 @@
 ---@diagnostic disable: inject-field, param-type-mismatch, undefined-field
+module(..., package.seeall)
+
 local ffi = require("ffi")
 
-local cast, copy = ffi.cast, ffi.copy
+local cast, copy, new = ffi.cast, ffi.copy, ffi.new
 
 local pkt_timestamp = ffi.typeof([[
    struct {
@@ -15,7 +17,7 @@ local pkt_timestamp_len = ffi.sizeof(pkt_timestamp)
 local timestamp_marker = 0x55
 
 function timestamp_to_pointer(timestamp)
-    local obj = ffi.new(pkt_timestamp)
+    local obj = new(pkt_timestamp)
     obj.marker = timestamp_marker
     obj.timestamp = timestamp
     local obj_p = cast(pkt_timestamp_p, obj)
