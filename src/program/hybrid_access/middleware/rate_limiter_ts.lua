@@ -112,13 +112,13 @@ function RateLimiterTS:push()
 
     -- receive packets from link
     if incoming > 0 then
-        local now = C.get_time_ns()
-        local nowp = ts.timestamp_to_pointer(now)
-        self:send_from_link(incoming, iface_in, iface_out, nowp)
+        local time_now = C.get_time_ns()
+        local time_now_p = ts.timestamp_to_pointer(time_now)
+        self:send_from_link(incoming, iface_in, iface_out, time_now_p)
 
         -- store incoming packets in buffer
         if self.buffer_contingent > 0 then
-            self:store_in_buffer(iface_in, nowp)
+            self:store_in_buffer(iface_in, time_now_p)
         end
 
         -- discard all remaining/out of band packets
