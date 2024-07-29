@@ -22,12 +22,15 @@ DelayerTS = {
         -- delay in ns
         delay = { default = 30e6 },
         -- correction in ns (actual link delay)
-        correction = { default = 0 }
+        correction = { default = 0 },
+        -- enable timestamp tagging
+        timestamp = { default = true }
     }
 }
 
 function DelayerTS:new(conf)
     local o = {
+        timestamp = conf.timestamp,
         tx_drop = 0,
     }
     o.delay = ffi.new("uint64_t", conf.delay - conf.correction)
@@ -73,11 +76,13 @@ function DelayerTS:push()
         local p = receive(iface_in)
 
         -- check if packet has a timestamp from rate limiter
-        local queue_time = ts.get_timestamp(p)
-        if queue_time ~= nil then
-            sending_time = queue_time + self.delay
-        else
-            sending_time = current_time + self.delay
+        if self.timestamp == true then
+            local queue_time = ts.get_timestamp(p)
+            if queue_time ~= nil then
+                sending_time = queue_time + self.delay
+            else
+                sending_time = current_time + self.delay
+            end
         end
 
         if C.db_enqueue(self.queue, p, sending_time) == 0 then

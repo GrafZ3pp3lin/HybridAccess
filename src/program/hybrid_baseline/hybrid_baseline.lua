@@ -32,7 +32,7 @@ local function parse_cli(str, cfg)
             else
                 cfg.delayer.delay = base.resolve_time(value)
             end
-        elseif key == "dc" or key == "delay_corr" and cfg.delayer ~= nil then
+        elseif (key == "dc" or key == "delay_corr") and cfg.delayer ~= nil then
             cfg.delayer.correction = base.resolve_time(value)
         elseif key == "r" or key == "rate" then
             if value == "off" then
@@ -40,15 +40,18 @@ local function parse_cli(str, cfg)
             else
                 cfg.rate_limiter.rate = base.resolve_bandwidth(value)
             end
-        elseif key == "c" or key == "capacity" and cfg.rate_limiter ~= nil then
+        elseif (key == "c" or key == "capacity") and cfg.rate_limiter ~= nil then
             cfg.rate_limiter.bucket_capacity = base.resolve_number(value)
-        elseif key == "b" or key == "buffer" and cfg.rate_limiter ~= nil then
+        elseif (key == "b" or key == "buffer") and cfg.rate_limiter ~= nil then
             cfg.rate_limiter.buffer_capacity = base.resolve_number(value)
-        elseif key == "l" or key == "latency" and cfg.rate_limiter ~= nil then
+        elseif (key == "l" or key == "latency") and cfg.rate_limiter ~= nil then
             cfg.rate_limiter.buffer_latency = base.resolve_time(value)
-        elseif key == "o" or key == "overhead" and cfg.rate_limiter ~= nil then
+        elseif (key == "o" or key == "overhead") and cfg.rate_limiter ~= nil then
             cfg.rate_limiter.additional_overhead = base.resolve_number(value)
-        elseif key == "ol1" or key == "overhead_layer1" and cfg.rate_limiter ~= nil then
+        elseif (key == "ts" or key == "timestamp") and cfg.rate_limiter ~= nil and cfg.delayer ~= nil then
+            cfg.rate_limiter.timestamp = base.resolve_bool(value)
+            cfg.delayer.timestamp = base.resolve_bool(value)
+        elseif (key == "ol1" or key == "overhead_layer1") and cfg.rate_limiter ~= nil then
             cfg.rate_limiter.layer1_overhead = base.resolve_bool(value)
         end
     end

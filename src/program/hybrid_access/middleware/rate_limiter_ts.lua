@@ -34,7 +34,9 @@ RateLimiterTS = {
         -- optional packet buffer
         buffer_capacity = { required = false },
         -- optional how much latency the buffer can cause in ns
-        buffer_latency = { required = false }
+        buffer_latency = { required = false },
+        -- enable timestamp tagging
+        timestamp = { default = true }
     }
 }
 
@@ -53,6 +55,7 @@ function RateLimiterTS:new(conf)
         buffer_capacity = conf.buffer_capacity,
         buffer_contingent = conf.buffer_capacity,
         additional_overhead = 0,
+        timestamp = conf.timestamp,
         txdrop = 0
     }
     if conf.additional_overhead ~= nil then
@@ -112,8 +115,11 @@ function RateLimiterTS:push()
 
     -- receive packets from link
     if incoming > 0 then
-        local time_now = C.get_time_ns()
-        local time_now_p = ts.timestamp_to_pointer(time_now)
+        local time_now_p = nil
+        if self.timestamp == true then
+            local time_now = C.get_time_ns()
+            time_now_p = ts.timestamp_to_pointer(time_now)
+        end
         self:send_from_link(incoming, iface_in, iface_out, time_now_p)
 
         -- store incoming packets in buffer
@@ -147,7 +153,7 @@ function RateLimiterTS:send_from_link(incoming, iface_in, iface_out, timestamp)
     local send_from_link = min(incoming, nwritable(iface_out))
     for _ = 1, send_from_link do
         local p = receive(iface_in)
-        if p.length + 9 <= max_payload then
+        if self.timestamp == true and p.length + 9 <= max_payload then
             ts.append_timestamp(p, timestamp)
         end
         local length = p.length + self.additional_overhead
@@ -170,7 +176,7 @@ function RateLimiterTS:store_in_buffer(iface_in, timestamp)
     local incoming = nreadable(iface_in)
     for _ = 1, incoming do
         local p = receive(iface_in)
-        if p.length + 9 <= max_payload then
+        if self.timestamp == true and p.length + 9 <= max_payload then
             ts.append_timestamp(p, timestamp)
         end
         local length = p.length + self.additional_overhead
