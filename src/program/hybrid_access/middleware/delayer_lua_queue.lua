@@ -21,7 +21,7 @@ local buffered_pkts = ffi.typeof([[
     } __attribute__((packed))
 ]])
 
-Delayer = {
+DelayerLuaQueue = {
     config = {
         -- delay in ms
         delay = { default = 30 },
@@ -30,7 +30,7 @@ Delayer = {
     }
 }
 
-function Delayer:new(conf)
+function DelayerLuaQueue:new(conf)
     assert(conf.delay >= 0, "delay has to be >= 0")
     local o = {
         queue = queue.Queue:new(),
@@ -46,12 +46,12 @@ function Delayer:new(conf)
     return o
 end
 
-function Delayer:push()
+function DelayerLuaQueue:push()
     self:buffer_input()
     self:release_buffer()
 end
 
-function Delayer:buffer_input()
+function DelayerLuaQueue:buffer_input()
     local input = assert(self.input.input, "input port not found")
     local length = link.nreadable(input)
     if length <= 0 then
@@ -80,7 +80,7 @@ function Delayer:buffer_input()
     end
 end
 
-function Delayer:release_buffer()
+function DelayerLuaQueue:release_buffer()
     local output = assert(self.output.output, "output port not found")
     if self.queue:size() <= 0 then
         return
@@ -104,7 +104,7 @@ function Delayer:release_buffer()
     end
 end
 
-function Delayer:send_buffer(buffer, output)
+function DelayerLuaQueue:send_buffer(buffer, output)
     for i = 0, buffer.length - 1 do
         local p = buffer.packets[i]
         link.transmit(output, p)
@@ -112,7 +112,7 @@ function Delayer:send_buffer(buffer, output)
     end
 end
 
-function Delayer:report()
+function DelayerLuaQueue:report()
     local input_stats = link.stats(self.input.input)
     local output_stats = link.stats(self.output.output)
 

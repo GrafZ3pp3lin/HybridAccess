@@ -16,7 +16,7 @@ local pkt_buffer = ffi.typeof([[
     } __attribute__((packed))
 ]])
 
-Delayer3 = {
+DelayerTimerBurst = {
     config = {
         -- delay in ms
         delay = { default = 30 },
@@ -25,7 +25,7 @@ Delayer3 = {
     }
 }
 
-function Delayer3:new(conf)
+function DelayerTimerBurst:new(conf)
     local o = {}
     o.delay = conf.delay * 1e6 - conf.correction
     setmetatable(o, self)
@@ -33,7 +33,7 @@ function Delayer3:new(conf)
     return o
 end
 
-function Delayer3:push()
+function DelayerTimerBurst:push()
     local iface_in = assert(self.input.input, "[Delayer3] <input> (Input) not found")
     local iface_out = assert(self.output.output, "[Delayer3] <output> (Output) not found")
 

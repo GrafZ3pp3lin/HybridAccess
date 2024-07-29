@@ -2,21 +2,26 @@
 
 module(..., package.seeall)
 
+local ffi = require("ffi")
+
 local engine = require("core.app")
 local link = require("core.link")
 local packet = require("core.packet")
 local lib = require("core.lib")
 
 local buffer = require("program.hybrid_access.base.buffer")
+local ts = require("program.hybrid_access.base.timestamp")
 
 local min, ceil = math.min, math.ceil
 local tonumber = tonumber
 local receive, transmit, nreadable, nwritable = link.receive, link.transmit, link.nreadable, link.nwritable
 local free = packet.free
 
+local C = ffi.C
+local max_payload = packet.max_payload
 local QUEUE_LENGTH = 65536 -- 65536 * 1500 = 100M -- 100M / 625MByte = 160ms
 
-TBRateLimiter = {
+RateLimiterTS = {
     config = {
         -- bits per second
         rate             = { required = true },
@@ -33,7 +38,7 @@ TBRateLimiter = {
     }
 }
 
-function TBRateLimiter:new(conf)
+function RateLimiterTS:new(conf)
     assert(conf.buffer_capacity == nil or conf.buffer_latency == nil, "Buffer capacity and latency are exclusive")
     local byte_rate = math.floor(conf.rate / 8)
     if conf.buffer_latency ~= nil then
@@ -64,7 +69,7 @@ function TBRateLimiter:new(conf)
     return o
 end
 
-function TBRateLimiter:report()
+function RateLimiterTS:report()
     local input_stats = link.stats(self.input.input)
     local output_stats = link.stats(self.output.output)
 
@@ -76,7 +81,7 @@ function TBRateLimiter:report()
     print(string.format("%20s bucket contingent", lib.comma_value(self.bucket_contingent)))
 end
 
-function TBRateLimiter:push()
+function RateLimiterTS:push()
     local iface_in = assert(self.input.input, "input port not found")
     local iface_out = assert(self.output.output, "output port not found")
 
@@ -107,11 +112,13 @@ function TBRateLimiter:push()
 
     -- receive packets from link
     if incoming > 0 then
-        self:send_from_link(incoming, iface_in, iface_out)
+        local now = C.get_time_ns()
+        local nowp = ts.timestamp_to_pointer(now)
+        self:send_from_link(incoming, iface_in, iface_out, nowp)
 
         -- store incoming packets in buffer
         if self.buffer_contingent > 0 then
-            self:store_in_buffer(iface_in)
+            self:store_in_buffer(iface_in, nowp)
         end
 
         -- discard all remaining/out of band packets
@@ -119,7 +126,7 @@ function TBRateLimiter:push()
     end
 end
 
-function TBRateLimiter:send_from_buffer(buffer_size, iface_out)
+function RateLimiterTS:send_from_buffer(buffer_size, iface_out)
     -- send from buffer
     local send_from_buffer = min(buffer_size, nwritable(iface_out))
     for _ = 1, send_from_buffer do
@@ -135,11 +142,14 @@ function TBRateLimiter:send_from_buffer(buffer_size, iface_out)
     end
 end
 
-function TBRateLimiter:send_from_link(incoming, iface_in, iface_out)
+function RateLimiterTS:send_from_link(incoming, iface_in, iface_out, timestamp)
     -- send from buffer
     local send_from_link = min(incoming, nwritable(iface_out))
     for _ = 1, send_from_link do
         local p = receive(iface_in)
+        if p.length + 9 <= max_payload then
+            ts.append_timestamp(p, timestamp)
+        end
         local length = p.length + self.additional_overhead
         if length <= self.bucket_contingent then
             self.bucket_contingent = self.bucket_contingent - length
@@ -156,10 +166,13 @@ function TBRateLimiter:send_from_link(incoming, iface_in, iface_out)
     end
 end
 
-function TBRateLimiter:store_in_buffer(iface_in)
+function RateLimiterTS:store_in_buffer(iface_in, timestamp)
     local incoming = nreadable(iface_in)
     for _ = 1, incoming do
         local p = receive(iface_in)
+        if p.length + 9 <= max_payload then
+            ts.append_timestamp(p, timestamp)
+        end
         local length = p.length + self.additional_overhead
         if length <= self.buffer_contingent then
             -- check if packet can be buffered
@@ -173,7 +186,7 @@ function TBRateLimiter:store_in_buffer(iface_in)
     end
 end
 
-function TBRateLimiter:drop_incoming_packets(iface_in)
+function RateLimiterTS:drop_incoming_packets(iface_in)
     local incoming = nreadable(iface_in)
     for _ = 1, incoming do
         local p = receive(iface_in)

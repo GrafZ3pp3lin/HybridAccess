@@ -6,6 +6,8 @@ local link = require("core.link")
 local lib = require("core.lib")
 local packet = require("core.packet")
 
+local ts = require("program.hybrid_access.base.timestamp")
+
 require("core.packet_h")
 require("program.hybrid_access.base.delay_buffer_h")
 
@@ -15,7 +17,7 @@ local min = math.min
 local transmit, receive, empty, nwritable = link.transmit, link.receive, link.empty, link.nwritable
 local free = packet.free
 
-Delayer5 = {
+DelayerTS = {
     config = {
         -- delay in ns
         delay = { default = 30e6 },
@@ -24,7 +26,7 @@ Delayer5 = {
     }
 }
 
-function Delayer5:new(conf)
+function DelayerTS:new(conf)
     local o = {
         tx_drop = 0,
     }
@@ -39,11 +41,11 @@ function Delayer5:new(conf)
     return o
 end
 
-function Delayer5:stop()
+function DelayerTS:stop()
     C.db_free(self.queue)
 end
 
-function Delayer5:push()
+function DelayerTS:push()
     local iface_in = assert(self.input.input, "<input> (Input) not found")
     local iface_out = assert(self.output.output, "<output> (Output) not found")
 
@@ -69,6 +71,15 @@ function Delayer5:push()
     local sending_time = current_time + self.delay
     while not empty(iface_in) do
         local p = receive(iface_in)
+
+        -- check if packet has a timestamp from rate limiter
+        local queue_time = ts.get_timestamp(p)
+        if queue_time ~= nil then
+            sending_time = queue_time + self.delay
+        else
+            sending_time = current_time + self.delay
+        end
+
         if C.db_enqueue(self.queue, p, sending_time) == 0 then
             free(p)
             self.tx_drop = self.tx_drop + 1
@@ -84,7 +95,7 @@ function Delayer5:push()
     end
 end
 
-function Delayer5:report()
+function DelayerTS:report()
     print(string.format("%20s current buffer length", lib.comma_value(C.db_size(self.queue))))
     print(string.format("%20s dropped", lib.comma_value(self.tx_drop)))
 end

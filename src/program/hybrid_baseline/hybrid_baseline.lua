@@ -7,8 +7,8 @@ local engine = require("core.app")
 local mellanox = require("apps.mellanox.connectx")
 
 local forwarder = require("program.hybrid_access.middleware.mac_forwarder")
-local delayer = require("program.hybrid_access.middleware.delayer5")
-local rate_limiter = require("program.hybrid_access.middleware.rate_limiter")
+local delayer = require("program.hybrid_access.middleware.delayer_ts")
+local rate_limiter = require("program.hybrid_access.middleware.rate_limiter_ts")
 
 local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
@@ -58,14 +58,14 @@ local function configure_middleware(m_type, c, cfg, source)
     local out_source = source
     if m_type == "r" or m_type == "rate_limiter" then
         if cfg.rate_limiter ~= nil then
-            config.app(c, "rate_limiter", rate_limiter.TBRateLimiter, cfg.rate_limiter)
+            config.app(c, "rate_limiter", rate_limiter.RateLimiterTS, cfg.rate_limiter)
             config.link(c, source.." -> rate_limiter.input")
             print(source.." -> rate_limiter.input")
             out_source = "rate_limiter.output"
         end
     elseif m_type == "d" or m_type == "delayer" then
         if cfg.delayer ~= nil then
-            config.app(c, "delayer", delayer.Delayer5, cfg.delayer)
+            config.app(c, "delayer", delayer.DelayerTS, cfg.delayer)
             config.link(c, source.." -> delayer.input")
             print(source.." -> delayer.input")
             out_source = "delayer.output"

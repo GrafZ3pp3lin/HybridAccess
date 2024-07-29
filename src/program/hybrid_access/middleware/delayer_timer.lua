@@ -4,7 +4,7 @@ local link = require("core.link")
 local timer = require("core.timer")
 local lib = require("core.lib")
 
-Delayer2 = {
+DelayerTimer = {
     config = {
         -- delay in ms
         delay = { default = 30 },
@@ -13,7 +13,7 @@ Delayer2 = {
     }
 }
 
-function Delayer2:new(conf)
+function DelayerTimer:new(conf)
     local o = {
         orig_delay = conf.delay,
         orig_correction = conf.correction
@@ -24,7 +24,7 @@ function Delayer2:new(conf)
     return o
 end
 
-function Delayer2:push()
+function DelayerTimer:push()
     local iface_in = assert(self.input.input, "[Delay1] <input> (Input) not found")
     local length = link.nreadable(iface_in)
     for _ = 1, length do
@@ -32,7 +32,7 @@ function Delayer2:push()
     end
 end
 
-function Delayer2:process_packet(iface_in)
+function DelayerTimer:process_packet(iface_in)
     local iface_out = self.output.output
     local pkt = link.receive(iface_in)
 
@@ -42,7 +42,7 @@ function Delayer2:process_packet(iface_in)
     timer.activate(t)
 end
 
-function Delayer2:report()
+function DelayerTimer:report()
     local input_stats = link.stats(self.input.input)
     local output_stats = link.stats(self.output.output)
 

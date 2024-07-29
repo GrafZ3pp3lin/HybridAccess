@@ -1,20 +1,23 @@
 module(..., package.seeall)
 
+local ffi = require("ffi")
+
 local link = require("core.link")
 local lib = require("core.lib")
 local packet = require("core.packet")
 
-local buffer = require("program.hybrid_access.base.buffer")
+require("core.packet_h")
+require("program.hybrid_access.base.buffer_h")
 
+local C = ffi.C
 local min = math.min
 local receive, transmit = link.receive, link.transmit
 
-Buffer2 = {}
+BufferH = {}
 
-function Buffer2:new(size)
-    local buf = buffer:new(size)
+function BufferH:new()
     local o = {
-        buffer = buf,
+        buffer = C.buffer_new(),
         buffered = 0,
         tx_drop = 0,
     }
@@ -23,24 +26,22 @@ function Buffer2:new(size)
     return o
 end
 
-function Buffer2:push()
+function BufferH:push()
     local iface_in = assert(self.input.input, "<input> (Input) not found")
     local iface_out = assert(self.output.output, "<output> (Output) not found")
 
     local i_len = link.nreadable(iface_in)
     local o_len = link.nwritable(iface_out)
-    local q_len = self.buffer:size()
+    local q_len = C.buffer_size(self.buffer)
 
-    -- forward queued packets
     local q_forward = min(q_len, o_len)
     if q_forward > 0 then
         for _ = 1, q_forward do
-            local pkt = self.buffer:dequeue()
+            local pkt = C.buffer_dequeue(self.buffer)
             transmit(iface_out, pkt)
         end
     end
 
-    -- forward incoming packets
     local i_forward = min(o_len - q_forward, i_len)
     if i_forward > 0 then
         for _ = 1, i_forward do
@@ -49,11 +50,10 @@ function Buffer2:push()
         end
     end
 
-    -- queue incoming packets
     if not link.empty(iface_in) then
         while not link.empty(iface_in) do
             local pkt = receive(iface_in)
-            if self.buffer:enqueue(pkt) == 0 then
+            if C.buffer_enqueue(self.buffer, pkt) == 0 then
                 packet.free(pkt)
                 self.tx_drop = self.tx_drop + 1
                 break
@@ -68,8 +68,8 @@ function Buffer2:push()
     end
 end
 
-function Buffer2:report()
-    print(string.format("%20s current buffer length", lib.comma_value(self.buffer:size())))
+function BufferH:report()
+    print(string.format("%20s current buffer length", lib.comma_value(C.buffer_size(self.buffer))))
     print(string.format("%20s total buffered", lib.comma_value(self.buffered)))
     print(string.format("%20s dropped", lib.comma_value(self.tx_drop)))
 end

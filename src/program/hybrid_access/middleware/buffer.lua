@@ -1,23 +1,20 @@
 module(..., package.seeall)
 
-local ffi = require("ffi")
-
 local link = require("core.link")
 local lib = require("core.lib")
 local packet = require("core.packet")
 
-require("core.packet_h")
-require("program.hybrid_access.base.buffer_h")
+local buffer = require("program.hybrid_access.base.buffer")
 
-local C = ffi.C
 local min = math.min
 local receive, transmit = link.receive, link.transmit
 
 Buffer = {}
 
-function Buffer:new()
+function Buffer:new(size)
+    local buf = buffer:new(size)
     local o = {
-        buffer = C.buffer_new(),
+        buffer = buf,
         buffered = 0,
         tx_drop = 0,
     }
@@ -32,16 +29,18 @@ function Buffer:push()
 
     local i_len = link.nreadable(iface_in)
     local o_len = link.nwritable(iface_out)
-    local q_len = C.buffer_size(self.buffer)
+    local q_len = self.buffer:size()
 
+    -- forward queued packets
     local q_forward = min(q_len, o_len)
     if q_forward > 0 then
         for _ = 1, q_forward do
-            local pkt = C.buffer_dequeue(self.buffer)
+            local pkt = self.buffer:dequeue()
             transmit(iface_out, pkt)
         end
     end
 
+    -- forward incoming packets
     local i_forward = min(o_len - q_forward, i_len)
     if i_forward > 0 then
         for _ = 1, i_forward do
@@ -50,10 +49,11 @@ function Buffer:push()
         end
     end
 
+    -- queue incoming packets
     if not link.empty(iface_in) then
         while not link.empty(iface_in) do
             local pkt = receive(iface_in)
-            if C.buffer_enqueue(self.buffer, pkt) == 0 then
+            if self.buffer:enqueue(pkt) == 0 then
                 packet.free(pkt)
                 self.tx_drop = self.tx_drop + 1
                 break
@@ -69,7 +69,7 @@ function Buffer:push()
 end
 
 function Buffer:report()
-    print(string.format("%20s current buffer length", lib.comma_value(C.buffer_size(self.buffer))))
+    print(string.format("%20s current buffer length", lib.comma_value(self.buffer:size())))
     print(string.format("%20s total buffered", lib.comma_value(self.buffered)))
     print(string.format("%20s dropped", lib.comma_value(self.tx_drop)))
 end
