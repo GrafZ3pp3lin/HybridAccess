@@ -2,7 +2,7 @@ local ffi = require("ffi")
 
 local cast, copy = ffi.cast, ffi.copy
 
-local longp = ffi.typeof("uint64_t *")
+local longp = ffi.typeof("uint64_t*")
 local timestamp_marker = 0x55
 
 function timestamp_to_pointer(timestamp)
