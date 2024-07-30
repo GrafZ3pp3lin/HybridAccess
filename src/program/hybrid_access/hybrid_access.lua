@@ -155,9 +155,9 @@ local function parse_cli(str, cfg)
     end
     
     for key, value in pairs(overwrites) do
-        if key == "d1" or key == "delay1" then
+        if (key == "d1" or key == "delay1") and cfg.link1.delayer ~= nil then
             cfg.link1.delayer.delay = tonumber(value)
-        elseif key == "d2" or key == "delay2" then
+        elseif (key == "d2" or key == "delay2") and cfg.link2.delayer ~= nil then
             cfg.link2.delayer.delay = tonumber(value)
         elseif key == "d" or key == "delay" then
             local d = tonumber(value)
@@ -188,6 +188,10 @@ local function parse_cli(str, cfg)
         elseif key == "c" or key == "capacity" then
             cfg.link1.rate_limiter.bucket_capacity = tonumber(value)
             cfg.link2.rate_limiter.bucket_capacity = tonumber(value)
+        elseif key == "l1" or key == "latency1" then
+            cfg.link1.rate_limiter.latency = tonumber(value)
+        elseif key == "l2" or key == "latency2" then
+            cfg.link2.rate_limiter.latency = tonumber(value)
         elseif key == "rd1" or key == "rec_delay1" then
             cfg.recombination.config.link_delays[1] = tonumber(value)
         elseif key == "rd2" or key == "rec_delay2" then
