@@ -36,7 +36,7 @@ function Recombination:new(conf)
         print("Recombination in eth mode")
         self.hybrid_access = require("program.hybrid_access.base.hybrid_access").HybridAccess:new()
     end
-    print(string.format("%f link delay for link 1, %f link delay for link 2", o.link_delays[1], o.link_delays[2]))
+    print(string.format("%fms link delay for link 1, %fms link delay for link 2", o.link_delays[1] / 1e6, o.link_delays[2] / 1e6))
     setmetatable(o, self)
     self.__index = self
     return o
@@ -51,12 +51,12 @@ function Recombination:report()
     print(string.format("%20s # / %20s b in 2", lib.comma_value(in2_stats.txpackets), lib.comma_value(in2_stats.txbytes)))
     print(string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets),
         lib.comma_value(output_stats.txbytes)))
-    print(string.format("%20s timeout started", lib.comma_value(self.timeout_startet)))
-    print(string.format("%20s timeout reached", lib.comma_value(self.timeout_reached)))
-    print(string.format("%20s timeout extended", lib.comma_value(self.timeout_extend)))
-    print(string.format("%20s dropped packages because of too low seq num",
-        lib.comma_value(self.drop_seq_no)))
-    print(string.format("%20s missing seq nums", lib.comma_value(self.missing)))
+    -- print(string.format("%20s timeout started", lib.comma_value(self.timeout_startet)))
+    -- print(string.format("%20s timeout reached", lib.comma_value(self.timeout_reached)))
+    -- print(string.format("%20s timeout extended", lib.comma_value(self.timeout_extend)))
+    -- print(string.format("%20s dropped packages because of too low seq num",
+    --     lib.comma_value(self.drop_seq_no)))
+    -- print(string.format("%20s missing seq nums", lib.comma_value(self.missing)))
 end
 
 function Recombination:push()
