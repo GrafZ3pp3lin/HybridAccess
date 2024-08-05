@@ -99,8 +99,8 @@ local function generate_config(cfg)
 
     if cfg.order ~= nil then
         for middleware in string.gmatch(cfg.order, "[^,]+") do
-            node_out1 = configure_middleware(middleware, c, cfg.link1, node_out1)
-            node_out2 = configure_middleware(middleware, c, cfg.link2, node_out2)
+            node_out1 = configure_middleware(middleware, c, cfg.link1, node_out1, "1")
+            node_out2 = configure_middleware(middleware, c, cfg.link2, node_out2, "2")
         end
     end
 
