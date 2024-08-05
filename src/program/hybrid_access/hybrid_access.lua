@@ -266,21 +266,10 @@ function run(args)
     
     local path = args[1]
     local rest = table.concat(args, ";", 2)
-
-    -- local cfg = ini.Ini:parse(path)
-    -- local middleware = ini.Ini:parse(middleware)
     
     worker.start("io1_worker", ('require("program.hybrid_access.hybrid_access").run_worker(%q, %q)'):format(path, rest))
     
     local c = config.new()
     engine.configure(c)
     engine.main()
-
-    -- local c = generate_config(cfg)
-    -- engine.configure(c)
-    -- engine.busywait = true
-    -- if cfg.report_interval ~= nil then
-    --     setup_report(cfg)
-    -- end
-
 end
