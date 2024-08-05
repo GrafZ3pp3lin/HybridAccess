@@ -13,7 +13,7 @@ local free = packet.free
 Buffer = {}
 
 function Buffer:new(size)
-    local buf = buffer:new(size)
+    local buf = buffer.Buffer:new(size)
     local o = {
         buffer = buf,
         -- buffered = 0,
