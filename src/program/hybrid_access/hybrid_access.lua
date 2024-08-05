@@ -8,17 +8,50 @@ local worker = require("core.worker")
 local mellanox = require("apps.mellanox.connectx")
 
 local recombination = require("program.hybrid_access.recombination.recombination")
+
 local forwarder = require("program.hybrid_access.middleware.mac_forwarder")
+
+local rate_limiter_ts = require("program.hybrid_access.middleware.rate_limiter_ts")
 local rate_limiter = require("program.hybrid_access.middleware.rate_limiter")
--- local delayer = require("program.hybrid_access.middleware.delayer")
--- local delayer2 = require("program.hybrid_access.middleware.delayer2")
--- local delayer3 = require("program.hybrid_access.middleware.delayer3")
--- local delayer4 = require("program.hybrid_access.middleware.delayer4")
-local delayer5 = require("program.hybrid_access.middleware.delayer5")
-local buffer = require("program.hybrid_access.middleware.buffer")
+
+local delayer = require("program.hybrid_access.middleware.delayer_c_buffer")
+local delayer_ts = require("program.hybrid_access.middleware.delayer_ts")
+
+-- local buffer = require("program.hybrid_access.middleware.buffer")
 
 local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
+
+local function configure_middleware(m_type, c, cfg, source, suffix)
+    local out_source = source
+    if m_type == "r" or m_type == "rate_limiter" then
+        if cfg.rate_limiter ~= nil then
+            local name =  "rate_limiter_" .. suffix
+            if cfg.rate_limiter.timestamp == true then
+                config.app(c, name, rate_limiter_ts.RateLimiterTS, cfg.rate_limiter)
+            else
+                config.app(c, name, rate_limiter.TBRateLimiter, cfg.rate_limiter)
+            end
+            config.link(c, source.." -> "..name..".input")
+            print(source.." -> "..name..".input")
+            out_source = name..".output"
+        end
+    elseif m_type == "d" or m_type == "delayer" then
+        if cfg.delayer ~= nil then
+            local name =  "delayer_" .. suffix
+            if cfg.delayer.timestamp == true then
+                config.app(c, name, delayer_ts.DelayerTS, cfg.delayer)
+            else
+                config.app(c, name, delayer.DelayerWithCBuffer, cfg.delayer)
+            end
+            config.link(c, source.." -> "..name..".input")
+            print(source.." -> "..name..".input")
+            out_source = name..".output"
+        end
+    end
+    
+    return out_source
+end
 
 local function generate_config(cfg)
     local c = config.new()
@@ -39,30 +72,22 @@ local function generate_config(cfg)
     local node_out1 = "link_out1.output"
     local node_out2 = "link_out2.output"
 
-    local pipeline1 = "in"
-    local pipeline2 = "in"
-
     -- recombination
 
-    config.app(c, "buffer_1", buffer.Buffer)
-    config.app(c, "buffer_2", buffer.Buffer)
+    -- config.app(c, "buffer_1", buffer.Buffer)
+    -- config.app(c, "buffer_2", buffer.Buffer)
 
-    config.link(c, node_out1.." -> buffer_1.input")
-    config.link(c, node_out2.." -> buffer_2.input")
+    -- config.link(c, node_out1.." -> buffer_1.input")
+    -- config.link(c, node_out2.." -> buffer_2.input")
 
-    config.link(c, "buffer_1.output -> recombination.input1")
-    config.link(c, "buffer_2.output -> recombination.input2")
+    -- config.link(c, "buffer_1.output -> recombination.input1")
+    -- config.link(c, "buffer_2.output -> recombination.input2")
 
-    -- config.link(c, node_out1.." -> recombination.input1")
-    -- config.link(c, node_out2.." -> recombination.input2")
+    config.link(c, node_out1.." -> recombination.input1")
+    config.link(c, node_out2.." -> recombination.input2")
 
     config.link(c, "recombination.output -> forwarder_in.input")
     config.link(c, "forwarder_in.output -> link_in.input")
-    
-    pipeline1 = pipeline1.." -> buffer -> recombination"
-    pipeline2 = pipeline2.." -> buffer -> recombination"
-    print("pipeline link 1: ", pipeline1)
-    print("pipeline link 2: ", pipeline2)
 
     -- loadbalancer
     config.link(c, "link_in.output -> loadbalancer.input")
@@ -70,55 +95,21 @@ local function generate_config(cfg)
     node_out1 = "loadbalancer.output1"
     node_out2 = "loadbalancer.output2"
 
-    pipeline1 = "loadbalancer"
-    pipeline2 = "loadbalancer"
-
-    if cfg.link1.enable.rate_limiter == true then
-        config.app(c, "rate_limiter_1", rate_limiter.TBRateLimiter, cfg.link1.rate_limiter)
-        config.link(c, node_out1.." -> rate_limiter_1.input")
-        node_out1 = "rate_limiter_1.output"
-        pipeline1 = pipeline1.." -> rate limiter"
-    end
-    if cfg.link2.enable.rate_limiter == true then
-        config.app(c, "rate_limiter_2", rate_limiter.TBRateLimiter, cfg.link2.rate_limiter)
-        config.link(c, node_out2.." -> rate_limiter_2.input")
-        node_out2 = "rate_limiter_2.output"
-        pipeline2 = pipeline2.." -> rate limiter"
+    if cfg.order ~= nil then
+        for middleware in string.gmatch(cfg.order, "[^,]+") do
+            node_out1 = configure_middleware(middleware, c, cfg.link1, node_out1)
+            node_out2 = configure_middleware(middleware, c, cfg.link2, node_out2)
+        end
     end
 
     config.app(c, "forwarder_out1", forwarder.MacForwarder, cfg.link1.forwarder)
     config.app(c, "forwarder_out2", forwarder.MacForwarder, cfg.link2.forwarder)
 
     config.link(c, node_out1.." -> forwarder_out1.input")
-    config.link(c, node_out2.." -> forwarder_out2.input")
-
-    pipeline1 = pipeline1.." -> forwarder"
-    pipeline2 = pipeline2.." -> forwarder"
-
-    node_out1 = "forwarder_out1.output"
-    node_out2 = "forwarder_out2.output"
-
-    if cfg.link1.enable.delayer == true then
-        config.app(c, "delayer_1", delayer5.Delayer5, cfg.link1.delayer)
-        config.link(c, node_out1.." -> delayer_1.input")
-        node_out1 = "delayer_1.output"
-        pipeline1 = pipeline1.." -> delayer"
-    end
-    if cfg.link2.enable.delayer == true then
-        config.app(c, "delayer_2", delayer5.Delayer5, cfg.link2.delayer)
-        config.link(c, node_out2.." -> delayer_2.input")
-        node_out2 = "delayer_2.output"
-        pipeline2 = pipeline2.." -> delayer"
-    end
+    config.link(c, "forwarder_out1.output -> link_out1.input")
     
-    config.link(c, node_out1.." -> link_out1.input")
-    config.link(c, node_out2.." -> link_out2.input")
-
-    pipeline1 = pipeline1.." -> out"
-    pipeline2 = pipeline2.." -> out"
-
-    print("pipeline link 1: ", pipeline1)
-    print("pipeline link 2: ", pipeline2)
+    config.link(c, node_out2.." -> forwarder_out2.input")
+    config.link(c, "forwarder_out2.output -> link_out2.input")
 
     return c
 end
@@ -156,49 +147,62 @@ local function parse_cli(str, cfg)
     
     for key, value in pairs(overwrites) do
         if (key == "d1" or key == "delay1") and cfg.link1.delayer ~= nil then
-            cfg.link1.delayer.delay = tonumber(value)
+            if value == "off" then
+                cfg.link1.delayer = nil
+            else
+                cfg.link1.delayer.delay = base.resolve_time(value)
+            end
         elseif (key == "d2" or key == "delay2") and cfg.link2.delayer ~= nil then
-            cfg.link2.delayer.delay = tonumber(value)
-        elseif key == "d" or key == "delay" then
-            local d = tonumber(value)
-            if d then
-                cfg.link1.delayer.delay = d
-                cfg.link2.delayer.delay = d
-            elseif value == "off" then
-                cfg.link1.enable.delayer = false
-                cfg.link2.enable.delayer = false
+            if value == "off" then
+                cfg.link2.delayer = nil
+            else
+                cfg.link2.delayer.delay = base.resolve_time(value)
             end
+        elseif (key == "dc1" or key == "delay_corr1") and cfg.link1.delayer ~= nil then
+            cfg.link1.delayer.correction = base.resolve_time(value)
+        elseif (key == "dc2" or key == "delay_corr2") and cfg.link2.delayer ~= nil then
+            cfg.link2.delayer.correction = base.resolve_time(value)
         elseif key == "r1" or key == "rate1" then
-            cfg.link1.rate_limiter.rate = tonumber(value)
-        elseif key == "r2" or key == "rate2" then
-            cfg.link2.rate_limiter.rate = tonumber(value)
-        elseif key == "r" or key == "rate" then
-            local d = tonumber(value)
-            if d then
-                cfg.link1.rate_limiter.rate = d
-                cfg.link2.rate_limiter.rate = d
-            elseif value == "off" then
-                cfg.link1.enable.rate_limiter = false
-                cfg.link2.enable.rate_limiter = false
+            if value == "off" then
+                cfg.link1.rate_limiter = nil
+            else
+                cfg.link1.rate_limiter.rate = base.resolve_bandwidth(value)
             end
-        elseif key == "c1" or key == "capacity1" then
-            cfg.link1.rate_limiter.bucket_capacity = tonumber(value)
-        elseif key == "c2" or key == "capacity2" then
-            cfg.link2.rate_limiter.bucket_capacity = tonumber(value)
-        elseif key == "c" or key == "capacity" then
-            cfg.link1.rate_limiter.bucket_capacity = tonumber(value)
-            cfg.link2.rate_limiter.bucket_capacity = tonumber(value)
-        elseif key == "l1" or key == "latency1" then
-            cfg.link1.rate_limiter.latency = tonumber(value)
-        elseif key == "l2" or key == "latency2" then
-            cfg.link2.rate_limiter.latency = tonumber(value)
-        elseif key == "rd1" or key == "rec_delay1" then
-            cfg.recombination.config.link_delays[1] = tonumber(value)
+        elseif key == "r2" or key == "rate2" then
+            if value == "off" then
+                cfg.link2.rate_limiter = nil
+            else
+                cfg.link2.rate_limiter.rate = base.resolve_bandwidth(value)
+            end
+        elseif (key == "c1" or key == "capacity1") and cfg.link1.rate_limiter ~= nil then
+            cfg.link1.rate_limiter.bucket_capacity = base.resolve_number(value)
+        elseif (key == "c2" or key == "capacity2") and cfg.link2.rate_limiter ~= nil then
+            cfg.link2.rate_limiter.bucket_capacity = base.resolve_number(value)
+        elseif (key == "l1" or key == "latency1") and cfg.link1.rate_limiter ~= nil then
+            cfg.link1.rate_limiter.buffer_latency = base.resolve_time(value)
+        elseif (key == "l2" or key == "latency2") and cfg.link2.rate_limiter ~= nil then
+            cfg.link2.rate_limiter.buffer_latency = base.resolve_time(value)
+        elseif (key == "o1" or key == "overhead1") and cfg.link1.rate_limiter ~= nil then
+            cfg.link1.rate_limiter.additional_overhead = base.resolve_number(value)
+        elseif (key == "o2" or key == "overhead2") and cfg.link2.rate_limiter ~= nil then
+            cfg.link2.rate_limiter.additional_overhead = base.resolve_number(value)
+        elseif (key == "ol1_1" or key == "overhead_layer1_1") and cfg.link1.rate_limiter ~= nil then
+            cfg.link1.rate_limiter.layer1_overhead = base.resolve_bool(value)
+        elseif (key == "ol1_2" or key == "overhead_layer1_2") and cfg.link2.rate_limiter ~= nil then
+            cfg.link2.rate_limiter.layer1_overhead = base.resolve_bool(value)
+        elseif (key == "ts" or key == "timestamp") then
+            if cfg.link1.rate_limiter ~= nil and cfg.link1.delayer ~= nil then
+                cfg.link1.rate_limiter.timestamp = base.resolve_bool(value)
+                cfg.link1.delayer.timestamp = base.resolve_bool(value)
+            end
+            if cfg.link2.rate_limiter ~= nil and cfg.link2.delayer ~= nil then
+                cfg.link2.rate_limiter.timestamp = base.resolve_bool(value)
+                cfg.link2.delayer.timestamp = base.resolve_bool(value)
+            end
+        elseif (key == "rd1" or key == "rec_delay1") then
+            cfg.recombination.config.link_delays[1] = base.resolve_time(value)
         elseif key == "rd2" or key == "rec_delay2" then
-            cfg.recombination.config.link_delays[2] = tonumber(value)
-        elseif key == "rd" or key == "rec_delay" then
-            cfg.recombination.config.link_delays[1] = tonumber(value)
-            cfg.recombination.config.link_delays[2] = tonumber(value)
+            cfg.recombination.config.link_delays[2] = base.resolve_time(value)
         elseif key == "l" or key == "loadbalancer" then
             if value == "sl" or value == "singlelink" then
                 cfg.loadbalancer.path = "program.hybrid_access.loadbalancer.single_link"

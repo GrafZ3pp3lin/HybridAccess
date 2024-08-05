@@ -2,17 +2,20 @@ module(..., package.seeall)
 
 local ffi = require("ffi")
 local link = require("core.link")
-local engine = require("core.app")
 local lib = require("core.lib")
 
 local co = require("program.hybrid_access.base.constants")
 
 local HYBRID_ACCESS_TYPE = co.HYBRID_ACCESS_TYPE
 
+local C = ffi.C
+
+local transmit, receive, empty, front = link.transmit, link.receive, link.empty, link.front
+local free = packet.free
+
 Recombination = {}
 Recombination.config = {
     link_delays = { required = true },
-    pull_npackets = { default = 102 },
     mode = { required = false }
 }
 
@@ -20,12 +23,11 @@ function Recombination:new(conf)
     local o = {
         next_pkt_num = ffi.new("uint64_t", 0),
         link_delays = conf.link_delays,
-        pull_npackets = conf.pull_npackets,
         wait_until = nil,
-        timeout_startet = 0,
-        timeout_reached = 0,
-        drop_seq_no = 0,
-        missing = 0,
+        -- timeout_startet = 0,
+        -- timeout_reached = 0,
+        -- drop_seq_no = 0,
+        -- missing = 0,
     }
     if conf.mode == "IP" then
         print("Recombination in ip mode")
@@ -87,13 +89,10 @@ function Recombination:process_links(output)
     local buffered_header = nil
     local empty_link = false
 
-    local limit = self.pull_npackets
-
     -- while at least one packet exists
-    while (not link.empty(self.input[1]) or not link.empty(self.input[2])) and limit > 0 do
+    while (not empty(self.input[1]) or not empty(self.input[2])) do
         empty_link = false
         buffered_header = nil
-        limit = limit - 1
         -- iterate over all links
         for i = 1, 2, 1 do
             local ha_header = self:read_next_hybrid_access_pkt(self.input[i], output)
@@ -108,9 +107,9 @@ function Recombination:process_links(output)
                 break
             elseif ha_header.seq_no < self.next_pkt_num then
                 -- Discard packets with a smaller sequence number than expected
-                self.drop_seq_no = self.drop_seq_no + 1
-                local p_real = link.receive(self.input[i])
-                packet.free(p_real)
+                -- self.drop_seq_no = self.drop_seq_no + 1
+                local p_real = receive(self.input[i])
+                free(p_real)
                 buffered_header = nil
                 break;
             elseif buffered_header == nil or ha_header.seq_no < buffered_header.seq_no then
@@ -121,16 +120,16 @@ function Recombination:process_links(output)
         end
         if buffered_header ~= nil then
             if not empty_link then
-                self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num)
+                -- self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num)
                 self:process_packet(self.input[buffered_input_index], output, buffered_header)
                 self.wait_until = nil
             elseif self.wait_until ~= nil then
                 -- we wait already for another packet
                 break
             else
-                local now = engine.now()
-                self.timeout_startet = self.timeout_startet + 1
-                self.wait_until = now + self:estimate_wait_time()
+                local current_time = C.get_time_ns()
+                -- self.timeout_startet = self.timeout_startet + 1
+                self.wait_until = current_time + self:estimate_wait_time()
                 self.empty_links = self:get_empty_links()
                 break
             end
@@ -153,10 +152,8 @@ function Recombination:process_waited(output)
         end
     end
     if buffered_header ~= nil then
-        self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num)
+        -- self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num)
         self:process_packet(self.input[buffered_input_index], output, buffered_header)
-    else
-        print("waited for timeout and no packet found")
     end
 end
 
@@ -165,14 +162,15 @@ end
 ---@return boolean continue continue processing
 ---@return boolean waited timeout reached
 function Recombination:continue_processing()
-    if engine.now() >= self.wait_until then
+    local current_time = C.get_time_ns()
+    if current_time >= self.wait_until then
         self.wait_until = nil
-        self.timeout_reached = self.timeout_reached + 1
+        -- self.timeout_reached = self.timeout_reached + 1
         return true, true
     else
         -- check if an empty link is no longer empty
         for _, k in ipairs(self.empty_links) do
-            if not link.empty(self.input[k]) then
+            if not empty(self.input[k]) then
                 return true, false
             end
         end
@@ -184,7 +182,7 @@ function Recombination:estimate_wait_time()
     local times = {}
     local index = 1
     for i, v in ipairs(self.input) do
-        if link.empty(v) then
+        if empty(v) then
             times[index] = self.link_delays[i]
             index = index + 1
         end
@@ -202,7 +200,7 @@ function Recombination:get_empty_links()
     local links = {}
     local index = 1
     for i, v in ipairs(self.input) do
-        if link.empty(v) then
+        if empty(v) then
             links[index] = i
             index = index + 1
         end
@@ -215,20 +213,20 @@ end
 ---@param output any
 ---@return unknown ha_header hybrid access header (nil if no packet available)
 function Recombination:read_next_hybrid_access_pkt(input, output)
-    if link.empty(input) then
+    if empty(input) then
         return nil
     end
-    local p = link.front(input)
+    local p = front(input)
     local ha_header = self.hybrid_access:get_header(p)
     if ha_header == nil then
         repeat
             -- just forward non hybrid packets
-            local p_real = link.receive(input)
-            link.transmit(output, p_real)
-            if link.empty(input) then
+            local p_real = receive(input)
+            transmit(output, p_real)
+            if empty(input) then
                 break
             end
-            p = link.front(input)
+            p = front(input)
             ha_header = self.hybrid_access:get_header(p)
         until ha_header ~= nil
     end
@@ -240,12 +238,12 @@ end
 ---@param output any output link
 ---@param ha_header any hybrid access header
 function Recombination:process_packet(input, output, ha_header)
-    local p = link.receive(input)
+    local p = receive(input)
     self.next_pkt_num = ha_header.seq_no + 1
     if ha_header.type == HYBRID_ACCESS_TYPE then
         p = self.hybrid_access:remove_header(p, ha_header.buf_type) -- DO NOT ACCESS ha_header after this, because memory gets overwritten here
-        link.transmit(output, p)
+        transmit(output, p)
     else
-        packet.free(p)
+        free(p)
     end
 end
