@@ -1,3 +1,4 @@
+// unused
 #include <stdlib.h>
 #include "buffer.h"
 

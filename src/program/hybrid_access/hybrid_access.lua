@@ -17,7 +17,7 @@ local rate_limiter = require("program.hybrid_access.middleware.rate_limiter")
 local delayer = require("program.hybrid_access.middleware.delayer_c_buffer")
 local delayer_ts = require("program.hybrid_access.middleware.delayer_ts")
 
--- local buffer = require("program.hybrid_access.middleware.buffer")
+local buffer = require("program.hybrid_access.middleware.buffer")
 
 local ini = require("program.hybrid_access.base.ini")
 local base = require("program.hybrid_access.base.base")
@@ -26,39 +26,39 @@ local function configure_middleware(m_type, c, cfg, source, suffix)
     local out_source = source
     if m_type == "r" or m_type == "rate_limiter" then
         if cfg.rate_limiter ~= nil then
-            local name =  "rate_limiter_" .. suffix
+            local name = "rate_limiter_" .. suffix
             if cfg.rate_limiter.timestamp == true then
                 config.app(c, name, rate_limiter_ts.RateLimiterTS, cfg.rate_limiter)
             else
                 config.app(c, name, rate_limiter.TBRateLimiter, cfg.rate_limiter)
             end
-            config.link(c, source.." -> "..name..".input")
-            print(source.." -> "..name..".input")
-            out_source = name..".output"
+            config.link(c, source .. " -> " .. name .. ".input")
+            print(source .. " -> " .. name .. ".input")
+            out_source = name .. ".output"
         end
     elseif m_type == "d" or m_type == "delayer" then
         if cfg.delayer ~= nil then
-            local name =  "delayer_" .. suffix
+            local name = "delayer_" .. suffix
             if cfg.delayer.timestamp == true then
                 config.app(c, name, delayer_ts.DelayerTS, cfg.delayer)
             else
                 config.app(c, name, delayer.DelayerWithCBuffer, cfg.delayer)
             end
-            config.link(c, source.." -> "..name..".input")
-            print(source.." -> "..name..".input")
-            out_source = name..".output"
+            config.link(c, source .. " -> " .. name .. ".input")
+            print(source .. " -> " .. name .. ".input")
+            out_source = name .. ".output"
         end
     end
-    
+
     return out_source
 end
 
 local function generate_config(cfg)
     local c = config.new()
 
-    config.app(c, "nic_in", mellanox.ConnectX, { pciaddress = cfg.input.pci, queues = {{ id = "q1" }}})
-    config.app(c, "nic_out1", mellanox.ConnectX, { pciaddress = cfg.link1.pci, queues = {{ id = "q1" }}})
-    config.app(c, "nic_out2", mellanox.ConnectX, { pciaddress = cfg.link2.pci, queues = {{ id = "q1" }}})
+    config.app(c, "nic_in", mellanox.ConnectX, { pciaddress = cfg.input.pci, queues = { { id = "q1" } } })
+    config.app(c, "nic_out1", mellanox.ConnectX, { pciaddress = cfg.link1.pci, queues = { { id = "q1" } } })
+    config.app(c, "nic_out2", mellanox.ConnectX, { pciaddress = cfg.link2.pci, queues = { { id = "q1" } } })
 
     config.app(c, "link_in", mellanox.IO, { pciaddress = cfg.input.pci, queue = "q1" })
     config.app(c, "link_out1", mellanox.IO, { pciaddress = cfg.link1.pci, queue = "q1" })
@@ -74,17 +74,19 @@ local function generate_config(cfg)
 
     -- recombination
 
-    -- config.app(c, "buffer_1", buffer.Buffer)
-    -- config.app(c, "buffer_2", buffer.Buffer)
+    if cfg.recombination_buffer == true then
+        config.app(c, "buffer_1", buffer.Buffer, 65536)
+        config.app(c, "buffer_2", buffer.Buffer, 65536)
 
-    -- config.link(c, node_out1.." -> buffer_1.input")
-    -- config.link(c, node_out2.." -> buffer_2.input")
+        config.link(c, node_out1 .. " -> buffer_1.input")
+        config.link(c, node_out2 .. " -> buffer_2.input")
 
-    -- config.link(c, "buffer_1.output -> recombination.input1")
-    -- config.link(c, "buffer_2.output -> recombination.input2")
-
-    config.link(c, node_out1.." -> recombination.input1")
-    config.link(c, node_out2.." -> recombination.input2")
+        config.link(c, "buffer_1.output -> recombination.input1")
+        config.link(c, "buffer_2.output -> recombination.input2")
+    else
+        config.link(c, node_out1 .. " -> recombination.input1")
+        config.link(c, node_out2 .. " -> recombination.input2")
+    end
 
     config.link(c, "recombination.output -> forwarder_in.input")
     config.link(c, "forwarder_in.output -> link_in.input")
@@ -105,10 +107,10 @@ local function generate_config(cfg)
     config.app(c, "forwarder_out1", forwarder.MacForwarder, cfg.link1.forwarder)
     config.app(c, "forwarder_out2", forwarder.MacForwarder, cfg.link2.forwarder)
 
-    config.link(c, node_out1.." -> forwarder_out1.input")
+    config.link(c, node_out1 .. " -> forwarder_out1.input")
     config.link(c, "forwarder_out1.output -> link_out1.input")
-    
-    config.link(c, node_out2.." -> forwarder_out2.input")
+
+    config.link(c, node_out2 .. " -> forwarder_out2.input")
     config.link(c, "forwarder_out2.output -> link_out2.input")
 
     return c
@@ -117,7 +119,7 @@ end
 local function setup_report(cfg)
     local report_timer = timer.new(
         "report",
-        function ()
+        function()
             if cfg.report_links then
                 base.report_links()
             end
@@ -137,14 +139,14 @@ end
 
 local function parse_cli(str, cfg)
     local overwrites = {};
-    
+
     for i in string.gmatch(str, "([^;]+)") do
         local k, v = string.match(i, "^-(%w+)=\"?(%w+)\"?$")
         if k and v then
             overwrites[k] = v
         end
     end
-    
+
     for key, value in pairs(overwrites) do
         if (key == "d1" or key == "delay1") and cfg.link1.delayer ~= nil then
             if value == "off" then
@@ -199,6 +201,8 @@ local function parse_cli(str, cfg)
                 cfg.link2.rate_limiter.timestamp = base.resolve_bool(value)
                 cfg.link2.delayer.timestamp = base.resolve_bool(value)
             end
+        elseif (key == "rb" or key == "recombination_buffer") then
+            cfg.recombination_buffer = base.resolve_bool(value)
         elseif (key == "rd1" or key == "rec_delay1") then
             cfg.recombination.config.link_delays[1] = base.resolve_time(value)
         elseif key == "rd2" or key == "rec_delay2" then
@@ -263,12 +267,12 @@ function run(args)
     if #args == 0 then
         error("please provide config path")
     end
-    
+
     local path = args[1]
     local rest = table.concat(args, ";", 2)
-    
+
     worker.start("io1_worker", ('require("program.hybrid_access.hybrid_access").run_worker(%q, %q)'):format(path, rest))
-    
+
     local c = config.new()
     engine.configure(c)
     engine.main()

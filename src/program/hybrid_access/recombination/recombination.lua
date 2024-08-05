@@ -16,7 +16,8 @@ local free = packet.free
 Recombination = {}
 Recombination.config = {
     link_delays = { required = true },
-    mode = { required = false }
+    mode = { required = false },
+    pull_npackets = { default = 150 }
 }
 
 function Recombination:new(conf)
@@ -24,6 +25,7 @@ function Recombination:new(conf)
         next_pkt_num = ffi.new("uint64_t", 0),
         link_delays = conf.link_delays,
         wait_until = nil,
+        pull_npackets = conf.pull_npackets,
         -- timeout_startet = 0,
         -- timeout_reached = 0,
         -- drop_seq_no = 0,
@@ -89,10 +91,13 @@ function Recombination:process_links(output)
     local buffered_header = nil
     local empty_link = false
 
+    local pulled = 0
+
     -- while at least one packet exists
-    while (not empty(self.input[1]) or not empty(self.input[2])) do
+    while (not empty(self.input[1]) or not empty(self.input[2])) and pulled < self.pull_npackets do
         empty_link = false
         buffered_header = nil
+        pulled = pulled + 1
         -- iterate over all links
         for i = 1, 2, 1 do
             local ha_header = self:read_next_hybrid_access_pkt(self.input[i], output)

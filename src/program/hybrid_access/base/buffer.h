@@ -1,3 +1,4 @@
+// unused
 enum { BUFFER_SIZE = 16 * 1024 };
 
 struct buffer {

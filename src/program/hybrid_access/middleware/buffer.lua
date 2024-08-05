@@ -7,7 +7,8 @@ local packet = require("core.packet")
 local buffer = require("program.hybrid_access.base.buffer")
 
 local min = math.min
-local receive, transmit = link.receive, link.transmit
+local receive, transmit, empty, nreadable, nwritable = link.receive, link.transmit, link.empty, link.nreadable, link.nwritable
+local free = packet.free
 
 Buffer = {}
 
@@ -15,8 +16,8 @@ function Buffer:new(size)
     local buf = buffer:new(size)
     local o = {
         buffer = buf,
-        buffered = 0,
-        tx_drop = 0,
+        -- buffered = 0,
+        -- tx_drop = 0,
     }
     setmetatable(o, self)
     self.__index = self
@@ -27,8 +28,8 @@ function Buffer:push()
     local iface_in = assert(self.input.input, "<input> (Input) not found")
     local iface_out = assert(self.output.output, "<output> (Output) not found")
 
-    local i_len = link.nreadable(iface_in)
-    local o_len = link.nwritable(iface_out)
+    local i_len = nreadable(iface_in)
+    local o_len = nwritable(iface_out)
     local q_len = self.buffer:size()
 
     -- forward queued packets
@@ -50,20 +51,20 @@ function Buffer:push()
     end
 
     -- queue incoming packets
-    if not link.empty(iface_in) then
-        while not link.empty(iface_in) do
+    if not empty(iface_in) then
+        while not empty(iface_in) do
             local pkt = receive(iface_in)
             if self.buffer:enqueue(pkt) == 0 then
-                packet.free(pkt)
-                self.tx_drop = self.tx_drop + 1
+                free(pkt)
+                -- self.tx_drop = self.tx_drop + 1
                 break
             end
-            self.buffered = self.buffered + 1
+            -- self.buffered = self.buffered + 1
         end
-        while not link.empty(iface_in) do
+        while not empty(iface_in) do
             local pkt = receive(iface_in)
-            self.tx_drop = self.tx_drop + 1
-            packet.free(pkt)
+            -- self.tx_drop = self.tx_drop + 1
+            free(pkt)
         end
     end
 end
