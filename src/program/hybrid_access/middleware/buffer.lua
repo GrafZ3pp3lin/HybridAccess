@@ -13,12 +13,11 @@ local free = packet.free
 Buffer = {}
 
 function Buffer:new(size)
-    local buf = buffer.Buffer:new(size)
     local o = {
-        buffer = buf,
         -- buffered = 0,
         -- tx_drop = 0,
     }
+    o.buffer = buffer.PacketBuffer:new(size)
     setmetatable(o, self)
     self.__index = self
     return o
