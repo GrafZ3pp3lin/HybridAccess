@@ -27,23 +27,23 @@ function Buffer:push()
     local iface_in = assert(self.input.input, "<input> (Input) not found")
     local iface_out = assert(self.output.output, "<output> (Output) not found")
 
-    local i_len = nreadable(iface_in)
-    local o_len = nwritable(iface_out)
-    local q_len = self.buffer:size()
+    local link_len = nreadable(iface_in)
+    local out_len = nwritable(iface_out)
+    local queue_len = self.buffer:size()
 
     -- forward queued packets
-    local q_forward = min(q_len, o_len)
-    if q_forward > 0 then
-        for _ = 1, q_forward do
+    local queue_forward = min(queue_len, out_len)
+    if queue_forward > 0 then
+        for _ = 1, queue_forward do
             local pkt = self.buffer:dequeue()
             transmit(iface_out, pkt)
         end
     end
 
     -- forward incoming packets
-    local i_forward = min(o_len - q_forward, i_len)
-    if i_forward > 0 then
-        for _ = 1, i_forward do
+    local link_forward = min(out_len - queue_forward, link_len)
+    if link_forward > 0 then
+        for _ = 1, link_forward do
             local pkt = receive(iface_in)
             transmit(iface_out, pkt)
         end

@@ -56,7 +56,7 @@ function RateLimiterTS:new(conf)
         buffer_contingent = conf.buffer_capacity,
         additional_overhead = 0,
         timestamp = conf.timestamp,
-        txdrop = 0
+        -- txdrop = 0
     }
     if conf.additional_overhead ~= nil then
         o.additional_overhead = conf.additional_overhead
@@ -166,7 +166,7 @@ function RateLimiterTS:send_from_link(incoming, iface_in, iface_out, timestamp)
             self.buffer:enqueue(p)
         else
             -- discard packet
-            self.txdrop = self.txdrop + 1
+            -- self.txdrop = self.txdrop + 1
             free(p)
         end
     end
@@ -186,7 +186,7 @@ function RateLimiterTS:store_in_buffer(iface_in, timestamp)
             self.buffer:enqueue(p)
         else
             -- discard packet
-            self.txdrop = self.txdrop + 1
+            -- self.txdrop = self.txdrop + 1
             free(p)
         end
     end
@@ -196,7 +196,7 @@ function RateLimiterTS:drop_incoming_packets(iface_in)
     local incoming = nreadable(iface_in)
     for _ = 1, incoming do
         local p = receive(iface_in)
-        self.txdrop = self.txdrop + 1
+        -- self.txdrop = self.txdrop + 1
         free(p)
     end
 end
