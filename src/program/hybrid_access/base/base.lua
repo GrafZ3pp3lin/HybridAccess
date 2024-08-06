@@ -81,6 +81,14 @@ function report_apps()
     end
 end
 
+function report_printer()
+    for _, app in pairs(engine.app_table) do
+        if app.print ~= nil then
+            app:print()
+        end
+    end
+end
+
 function report_nics()
     print("nic report:")
     for name, app in pairs(engine.app_table) do

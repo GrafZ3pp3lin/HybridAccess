@@ -11,6 +11,8 @@ local recombination = require("program.hybrid_access.recombination.recombination
 
 local forwarder = require("program.hybrid_access.middleware.mac_forwarder")
 
+local printer = require("program.hybrid_access.middleware.printer")
+
 local rate_limiter_ts = require("program.hybrid_access.middleware.rate_limiter_ts")
 local rate_limiter = require("program.hybrid_access.middleware.rate_limiter")
 
@@ -88,7 +90,14 @@ local function generate_config(cfg)
         config.link(c, node_out2 .. " -> recombination.input2")
     end
 
-    config.link(c, "recombination.output -> forwarder_in.input")
+    if cfg.print_file ~= nil then
+        config.app(c, "printer", printer.Printer, { bytes = true, file = cfg.print_file })
+        config.link(c, "recombination.output -> printer.input")
+        config.link(c, "printer.output -> forwarder_in.input")
+    else
+        config.link(c, "recombination.output -> forwarder_in.input")
+    end
+
     config.link(c, "forwarder_in.output -> link_in.input")
 
     -- loadbalancer
@@ -126,6 +135,9 @@ local function setup_report(cfg)
             if cfg.report_apps then
                 base.report_apps()
                 -- base.report_nics()
+            end
+            if cfg.report_printer then
+                base.report_printer()
             end
         end,
         cfg.report_interval,
