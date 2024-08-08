@@ -2,26 +2,38 @@ module(..., package.seeall)
 
 local engine = require("core.app")
 local link = require("core.link")
+
 local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
+
 local min = math.min
+local tonumber = tonumber
+local empty, receive = link.empty, link.receive
 
 TokenBucket = loadbalancer.LoadBalancer:new()
 TokenBucket.config = {
-    primary  = { default = 1 },
-    rate     = { required = true },
-    capacity = { required = true },
-    setup    = { required = false }
+    -- bit rate
+    rate            = { required = true },
+    -- amount of tokens
+    capacity        = { required = true },
+    -- multiply rate and capacity by this percentage
+    percentage      = { default = 99 },
+    -- use layer 1 overhead
+    layer1_overhead = { default = true },
+    -- loadbalancer setup
+    setup           = { required = false }
 }
 
 function TokenBucket:new(conf)
+    local rp = conf.percentage / 100
     local o = {
-        primary = conf.primary,
-        byte_rate = math.floor(conf.rate / 8),
-        capacity = conf.capacity,
+        byte_rate = math.floor((conf.rate * rp) / 8),
+        capacity = math.floor(conf.capacity * rp),
         contingent = conf.capacity,
         class_type = "TokenBucket"
     }
-    o.additional_overhead = 7 + 1 + 4 + 12
+    if conf.layer1_overhead == true then
+        o.additional_overhead = 7 + 1 + 4 + 12
+    end
     print(string.format("tokenbucket: %20s byte/s, %20s capacity", o.byte_rate, o.capacity))
     setmetatable(o, self)
     self.__index = self
@@ -30,11 +42,11 @@ function TokenBucket:new(conf)
 end
 
 function TokenBucket:push()
-    local i = assert(self.input.input, "input port not found")
-    local o1 = assert(self.output.output1, "output port 1 not found")
-    local o2 = assert(self.output.output2, "output port 2 not found")
+    local iface_in = assert(self.input.input, "input port not found")
+    local iface_out1 = assert(self.output.output1, "output port 1 not found")
+    local iface_out2 = assert(self.output.output2, "output port 2 not found")
 
-    if link.empty(i) then
+    if empty(iface_in) then
         return
     end
 
@@ -47,21 +59,21 @@ function TokenBucket:push()
     )
     self.last_time = cur_now
 
-    for _ = 1, link.nreadable(i) do
-        local p = link.receive(i)
+    while not empty(iface_in) do
+        local p = receive(iface_in)
         local length = p.length + self.additional_overhead
 
         if length <= self.contingent then
             self.contingent = self.contingent - length
-            self:send_pkt(p, o1)
+            self:send_pkt(p, iface_out1)
         else
-            self:send_pkt(p, o2)
+            self:send_pkt(p, iface_out2)
             break
         end
     end
-    for _ = 1, link.nreadable(i) do
+    while not empty(iface_in) do
         -- send rest of packages to output 2
-        local p = link.receive(i)
-        self:send_pkt(p, o2)
+        local p = receive(iface_in)
+        self:send_pkt(p, iface_out2)
     end
 end

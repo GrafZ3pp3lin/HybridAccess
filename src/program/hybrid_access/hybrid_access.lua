@@ -247,9 +247,11 @@ local function parse_cli(str, cfg)
             end
             cfg.loadbalancer.config.bandwidths.output2 = tonumber(value)
         elseif key == "tbr" or value == "tb_rate" then
-            cfg.loadbalancer.config.rate = tonumber(value)
+            cfg.loadbalancer.config.rate = base.resolve_bandwidth(value)
         elseif key == "tbc" or value == "tb_capacity" then
-            cfg.loadbalancer.config.capacity = tonumber(value)
+            cfg.loadbalancer.config.capacity = base.resolve_number(value)
+        elseif key == "tbp" or value == "tb_percentage" then
+            cfg.loadbalancer.config.percentage = tonumber(value)
         end
     end
 end

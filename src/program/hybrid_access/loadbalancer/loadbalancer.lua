@@ -9,6 +9,8 @@ local co = require("program.hybrid_access.base.constants")
 local ETHER_HEADER_LEN, GET_ETHER_TYPE =
     co.ETHER_HEADER_LEN, co.GET_ETHER_TYPE
 
+local transmit = link.transmit
+
 LoadBalancer = {}
 
 function LoadBalancer:new()
@@ -46,7 +48,7 @@ function LoadBalancer:send_pkt(pkt, l_out)
         return
     end
     self.sequence_number = self.sequence_number + 1
-    link.transmit(l_out, p_new)
+    transmit(l_out, p_new)
 end
 
 function LoadBalancer:send_pkt_with_ddc(pkt, l_out, l_delay)
@@ -56,8 +58,8 @@ function LoadBalancer:send_pkt_with_ddc(pkt, l_out, l_delay)
         return
     end
     self.sequence_number = self.sequence_number + 2
-    link.transmit(l_delay, p_delay)
-    link.transmit(l_out, p_new)
+    transmit(l_delay, p_delay)
+    transmit(l_out, p_new)
 end
 
 function LoadBalancer:report()
