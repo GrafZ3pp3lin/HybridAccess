@@ -17,11 +17,12 @@ Recombination = {}
 Recombination.config = {
     link_delays = { required = true },
     mode = { required = false },
-    pull_npackets = { default = 150 }
+    pull_npackets = { default = 204 }
 }
 
 function Recombination:new(conf)
     local o = {
+        ordered_input = {},
         next_pkt_num = ffi.new("uint64_t", 0),
         link_delays = conf.link_delays,
         wait_until = nil,
@@ -42,12 +43,13 @@ function Recombination:new(conf)
     print(string.format("%fms link delay for link 1, %fms link delay for link 2", o.link_delays[1] / 1e6, o.link_delays[2] / 1e6))
     setmetatable(o, self)
     self.__index = self
+    
     return o
 end
 
 function Recombination:report()
-    local in1_stats = link.stats(self.input.input1)
-    local in2_stats = link.stats(self.input.input2)
+    local in1_stats = link.stats(self.ordered_input[1])
+    local in2_stats = link.stats(self.ordered_input[2])
     local output_stats = link.stats(self.output.output)
 
     print(string.format("%20s # / %20s b in 1", lib.comma_value(in1_stats.txpackets), lib.comma_value(in1_stats.txbytes)))
@@ -62,6 +64,19 @@ function Recombination:report()
     print(string.format("%20s missing seq nums", lib.comma_value(self.missing)))
 end
 
+function Recombination:link(in_or_out, l_name)
+    if in_or_out ~= 'input' then
+        return
+    end
+    local index = tonumber(string.sub(l_name, 6))
+    if index == nil then
+        error("link name is not parsable: "..l_name)
+        return
+    end
+    print(string.format("added link %s as index %i", l_name, index))
+    self.ordered_input[index] = self.input[l_name]
+end
+
 function Recombination:push()
     local process, waited = true, false
 
@@ -73,21 +88,21 @@ function Recombination:push()
         return
     end
 
-    local output = assert(self.output.output, "output port not found")
+    local output_link = self.output.output
 
     if waited then
-        self:process_waited(output)
+        self:process_waited(output_link)
     end
 
-    self:process_links(output)
+    self:process_links(output_link)
 end
 
 ---Process packets.
 ---Instantly process the next expected sequence number.
 ---Else if both links do have packets choose the lower sequence number first.
 ---If there is an empty link, start a timer to wait for the expected packet.
----@param output any output link
-function Recombination:process_links(output)
+---@param output_link any output link
+function Recombination:process_links(output_link)
     local buffered_input_index = 0
     local buffered_header = nil
     local empty_link = false
@@ -95,26 +110,26 @@ function Recombination:process_links(output)
     local pulled = 0
 
     -- while at least one packet exists
-    while (not empty(self.input[1]) or not empty(self.input[2])) and pulled < self.pull_npackets do
+    while (not empty(self.ordered_input[1]) or not empty(self.ordered_input[2])) and pulled < self.pull_npackets do
         empty_link = false
         buffered_header = nil
         pulled = pulled + 1
         -- iterate over all links
         for i = 1, 2, 1 do
-            local ha_header = self:read_next_hybrid_access_pkt(self.input[i], output)
+            local ha_header = self:read_next_hybrid_access_pkt(self.ordered_input[i], output_link)
             if ha_header == nil then
                 -- found no hybrid access packet on that link
                 empty_link = true
             elseif ha_header.seq_no == self.next_pkt_num then
                 -- found expected packet
-                self:process_packet(self.input[i], output, ha_header)
+                self:process_packet(self.ordered_input[i], output_link, ha_header)
                 self.wait_until = nil
                 buffered_header = nil
                 break
             elseif ha_header.seq_no < self.next_pkt_num then
                 -- Discard packets with a smaller sequence number than expected
                 self.drop_seq_no = self.drop_seq_no + 1 -- COUNTER
-                local p_real = receive(self.input[i])
+                local p_real = receive(self.ordered_input[i])
                 free(p_real)
                 buffered_header = nil
                 break;
@@ -127,15 +142,19 @@ function Recombination:process_links(output)
         if buffered_header ~= nil then
             if not empty_link then
                 self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num) -- COUNTER
-                self:process_packet(self.input[buffered_input_index], output, buffered_header)
+                self:process_packet(self.ordered_input[buffered_input_index], output_link, buffered_header)
                 self.wait_until = nil
             elseif self.wait_until ~= nil then
                 -- we wait already for another packet
                 break
             else
+                -- there is one empty link and a paket with an unexpected sequence number on the other link.
+                -- wait till either:
+                -- - there is no empty link
+                -- - timeout
                 local current_time = C.get_time_ns()
                 self.timeout_startet = self.timeout_startet + 1 -- COUNTER
-                self.wait_until = current_time + self:estimate_wait_time()
+                self.wait_until = current_time + self:get_wait_time(buffered_input_index)
                 self.empty_links = self:get_empty_links()
                 break
             end
@@ -145,13 +164,13 @@ end
 
 ---Process packets after timeout.
 ---Choose the one with the lowest sequence number.
----@param output any output link
-function Recombination:process_waited(output)
+---@param output_link any output link
+function Recombination:process_waited(output_link)
     local buffered_input_index = 0
     local buffered_header = nil
 
     for i = 1, 2, 1 do
-        local ha_header = self:read_next_hybrid_access_pkt(self.input[i], output)
+        local ha_header = self:read_next_hybrid_access_pkt(self.ordered_input[i], output_link)
         if ha_header ~= nil and (buffered_header == nil or ha_header.seq_no < buffered_header.seq_no) then
             buffered_input_index = i
             buffered_header = ha_header
@@ -159,7 +178,7 @@ function Recombination:process_waited(output)
     end
     if buffered_header ~= nil then
         self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num) -- COUNTER
-        self:process_packet(self.input[buffered_input_index], output, buffered_header)
+        self:process_packet(self.ordered_input[buffered_input_index], output_link, buffered_header)
     end
 end
 
@@ -176,7 +195,7 @@ function Recombination:continue_processing()
     else
         -- check if an empty link is no longer empty
         for _, k in ipairs(self.empty_links) do
-            if not empty(self.input[k]) then
+            if not empty(self.ordered_input[k]) then
                 return true, false
             end
         end
@@ -184,28 +203,14 @@ function Recombination:continue_processing()
     return false, false
 end
 
-function Recombination:estimate_wait_time()
-    local times = {}
-    local index = 1
-    for i, v in ipairs(self.input) do
-        if empty(v) then
-            times[index] = self.link_delays[i]
-            index = index + 1
-        end
-    end
-    if index == 2 then
-        return times[1]
-    elseif index == 1 then
-        error("could not estimate wait time due to no empty links")
-    else
-        return math.max(unpack(times))
-    end
+function Recombination:get_wait_time(not_empty_link_index)
+    return self.link_delays[3 - not_empty_link_index]
 end
 
 function Recombination:get_empty_links()
     local links = {}
     local index = 1
-    for i, v in ipairs(self.input) do
+    for i, v in ipairs(self.ordered_input) do
         if empty(v) then
             links[index] = i
             index = index + 1
@@ -215,24 +220,24 @@ function Recombination:get_empty_links()
 end
 
 ---read next hybrid access packet from input link.
----@param input any
----@param output any
+---@param input_link any
+---@param output_link any
 ---@return unknown ha_header hybrid access header (nil if no packet available)
-function Recombination:read_next_hybrid_access_pkt(input, output)
-    if empty(input) then
+function Recombination:read_next_hybrid_access_pkt(input_link, output_link)
+    if empty(input_link) then
         return nil
     end
-    local p = front(input)
+    local p = front(input_link)
     local ha_header = self.hybrid_access:get_header(p)
     if ha_header == nil then
         repeat
             -- just forward non hybrid packets
-            local p_real = receive(input)
-            transmit(output, p_real)
-            if empty(input) then
+            local p_real = receive(input_link)
+            transmit(output_link, p_real)
+            if empty(input_link) then
                 break
             end
-            p = front(input)
+            p = front(input_link)
             ha_header = self.hybrid_access:get_header(p)
         until ha_header ~= nil
     end
@@ -240,15 +245,15 @@ function Recombination:read_next_hybrid_access_pkt(input, output)
 end
 
 ---process the next packet from link input
----@param input any input link
----@param output any output link
+---@param input_link any input link
+---@param output_link any output link
 ---@param ha_header any hybrid access header
-function Recombination:process_packet(input, output, ha_header)
-    local p = receive(input)
+function Recombination:process_packet(input_link, output_link, ha_header)
+    local p = receive(input_link)
     self.next_pkt_num = ha_header.seq_no + 1
     if ha_header.type == HYBRID_ACCESS_TYPE then
         p = self.hybrid_access:remove_header(p, ha_header.buf_type) -- DO NOT ACCESS ha_header after this, because memory gets overwritten here
-        transmit(output, p)
+        transmit(output_link, p)
     else
         free(p)
     end
