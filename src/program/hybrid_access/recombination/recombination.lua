@@ -28,10 +28,10 @@ function Recombination:new(conf)
         wait_until = nil,
         pull_npackets = conf.pull_npackets,
 
-        timeout_startet = 0,
-        timeout_reached = 0,
-        drop_seq_no = 0,
-        missing = 0,
+        -- timeout_startet = 0,
+        -- timeout_reached = 0,
+        -- drop_seq_no = 0,
+        -- missing = 0,
     }
     if conf.mode == "IP" then
         print("Recombination in ip mode")
@@ -73,7 +73,7 @@ function Recombination:link(in_or_out, l_name)
         error("link name is not parsable: "..l_name)
         return
     end
-    print(string.format("added link %s as index %i", l_name, index))
+    print(string.format("recombination: added link %s as index %i", l_name, index))
     self.ordered_input[index] = self.input[l_name]
 end
 
@@ -128,7 +128,7 @@ function Recombination:process_links(output_link)
                 break
             elseif ha_header.seq_no < self.next_pkt_num then
                 -- Discard packets with a smaller sequence number than expected
-                self.drop_seq_no = self.drop_seq_no + 1 -- COUNTER
+                -- self.drop_seq_no = self.drop_seq_no + 1 -- COUNTER
                 local p_real = receive(self.ordered_input[i])
                 free(p_real)
                 buffered_header = nil
@@ -141,7 +141,7 @@ function Recombination:process_links(output_link)
         end
         if buffered_header ~= nil then
             if not empty_link then
-                self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num) -- COUNTER
+                -- self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num) -- COUNTER
                 self:process_packet(self.ordered_input[buffered_input_index], output_link, buffered_header)
                 self.wait_until = nil
             elseif self.wait_until ~= nil then
@@ -153,7 +153,7 @@ function Recombination:process_links(output_link)
                 -- - there is no empty link
                 -- - timeout
                 local current_time = C.get_time_ns()
-                self.timeout_startet = self.timeout_startet + 1 -- COUNTER
+                -- self.timeout_startet = self.timeout_startet + 1 -- COUNTER
                 self.wait_until = current_time + self:get_wait_time(buffered_input_index)
                 self.empty_links = self:get_empty_links()
                 break
@@ -177,7 +177,7 @@ function Recombination:process_waited(output_link)
         end
     end
     if buffered_header ~= nil then
-        self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num) -- COUNTER
+        -- self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num) -- COUNTER
         self:process_packet(self.ordered_input[buffered_input_index], output_link, buffered_header)
     end
 end
@@ -190,7 +190,7 @@ function Recombination:continue_processing()
     local current_time = C.get_time_ns()
     if current_time >= self.wait_until then
         self.wait_until = nil
-        self.timeout_reached = self.timeout_reached + 1 -- COUNTER
+        -- self.timeout_reached = self.timeout_reached + 1 -- COUNTER
         return true, true
     else
         -- check if an empty link is no longer empty

@@ -31,7 +31,7 @@ DelayerTS = {
 function DelayerTS:new(conf)
     local o = {
         timestamp = conf.timestamp,
-        tx_drop = 0,
+        -- tx_drop = 0,
     }
     o.delay = ffi.new("uint64_t", conf.delay - conf.correction)
     o.queue = C.db_new()
@@ -87,7 +87,7 @@ function DelayerTS:push()
 
         if C.db_enqueue(self.queue, p, sending_time) == 0 then
             free(p)
-            self.tx_drop = self.tx_drop + 1 -- COUNTER
+            -- self.tx_drop = self.tx_drop + 1 -- COUNTER
             break;
         end
     end
@@ -96,7 +96,7 @@ function DelayerTS:push()
     while not empty(iface_in) do
         local p = receive(iface_in)
         free(p)
-        self.tx_drop = self.tx_drop + 1 -- COUNTER
+        -- self.tx_drop = self.tx_drop + 1 -- COUNTER
     end
 end
 

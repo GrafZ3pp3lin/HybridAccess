@@ -14,8 +14,8 @@ Buffer = {}
 
 function Buffer:new(size)
     local o = {
-        buffered = 0,
-        tx_drop = 0,
+        -- buffered = 0,
+        -- tx_drop = 0,
     }
     o.buffer = buffer.PacketBuffer:new(size)
     setmetatable(o, self)
@@ -55,14 +55,14 @@ function Buffer:push()
             local pkt = receive(iface_in)
             if self.buffer:enqueue(pkt) == 0 then
                 free(pkt)
-                self.tx_drop = self.tx_drop + 1 -- COUNTER
+                -- self.tx_drop = self.tx_drop + 1 -- COUNTER
                 break
             end
-            self.buffered = self.buffered + 1 -- COUNTER
+            -- self.buffered = self.buffered + 1 -- COUNTER
         end
         while not empty(iface_in) do
             local pkt = receive(iface_in)
-            self.tx_drop = self.tx_drop + 1 -- COUNTER
+            -- self.tx_drop = self.tx_drop + 1 -- COUNTER
             free(pkt)
         end
     end

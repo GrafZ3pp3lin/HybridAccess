@@ -167,7 +167,7 @@ function RateLimiterTS:send_from_link(incoming, iface_in, iface_out, timestamp)
             self.buffer:enqueue(p)
         else
             -- discard packet
-            self.txdrop = self.txdrop + 1 -- COUNTER
+            -- self.txdrop = self.txdrop + 1 -- COUNTER
             free(p)
         end
     end
@@ -187,7 +187,7 @@ function RateLimiterTS:store_in_buffer(iface_in, timestamp)
             self.buffer:enqueue(p)
         else
             -- discard packet
-            self.txdrop = self.txdrop + 1 -- COUNTER
+            -- self.txdrop = self.txdrop + 1 -- COUNTER
             free(p)
         end
     end
@@ -197,7 +197,7 @@ function RateLimiterTS:drop_incoming_packets(iface_in)
     local incoming = nreadable(iface_in)
     for _ = 1, incoming do
         local p = receive(iface_in)
-        self.txdrop = self.txdrop + 1 -- COUNTER
+        -- self.txdrop = self.txdrop + 1 -- COUNTER
         free(p)
     end
 end
