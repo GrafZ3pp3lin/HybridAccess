@@ -55,14 +55,14 @@ function BufferH:push()
             local pkt = receive(iface_in)
             if C.buffer_enqueue(self.buffer, pkt) == 0 then
                 packet.free(pkt)
-                self.tx_drop = self.tx_drop + 1
+                self.tx_drop = self.tx_drop + 1 -- COUNTER
                 break
             end
-            self.buffered = self.buffered + 1
+            self.buffered = self.buffered + 1 -- COUNTER
         end
         while not link.empty(iface_in) do
             local pkt = receive(iface_in)
-            self.tx_drop = self.tx_drop + 1
+            self.tx_drop = self.tx_drop + 1 -- COUNTER
             packet.free(pkt)
         end
     end

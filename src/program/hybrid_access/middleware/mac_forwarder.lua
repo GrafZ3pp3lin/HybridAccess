@@ -37,8 +37,4 @@ function MacForwarder:push()
         copy(p.data, self.header_addr, 12)
         transmit(output, p)
     end
-
-    -- local incoming = nreadable(input)
-    -- for _ = 1, incoming do
-    -- end
 end

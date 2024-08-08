@@ -14,8 +14,8 @@ Buffer = {}
 
 function Buffer:new(size)
     local o = {
-        -- buffered = 0,
-        -- tx_drop = 0,
+        buffered = 0,
+        tx_drop = 0,
     }
     o.buffer = buffer.PacketBuffer:new(size)
     setmetatable(o, self)
@@ -55,21 +55,26 @@ function Buffer:push()
             local pkt = receive(iface_in)
             if self.buffer:enqueue(pkt) == 0 then
                 free(pkt)
-                -- self.tx_drop = self.tx_drop + 1
+                self.tx_drop = self.tx_drop + 1 -- COUNTER
                 break
             end
-            -- self.buffered = self.buffered + 1
+            self.buffered = self.buffered + 1 -- COUNTER
         end
         while not empty(iface_in) do
             local pkt = receive(iface_in)
-            -- self.tx_drop = self.tx_drop + 1
+            self.tx_drop = self.tx_drop + 1 -- COUNTER
             free(pkt)
         end
     end
 end
 
 function Buffer:report()
+    local iface_in = assert(self.input.input, "<input> (Input) not found")
+    local iface_out = assert(self.output.output, "<output> (Output) not found")
+
     print(string.format("%20s current buffer length", lib.comma_value(self.buffer:size())))
     print(string.format("%20s total buffered", lib.comma_value(self.buffered)))
     print(string.format("%20s dropped", lib.comma_value(self.tx_drop)))
+    print(string.format("%20s output readable", lib.comma_value(nreadable(iface_out))))
+    print(string.format("%20s input readable", lib.comma_value(nreadable(iface_in))))
 end

@@ -26,10 +26,11 @@ function Recombination:new(conf)
         link_delays = conf.link_delays,
         wait_until = nil,
         pull_npackets = conf.pull_npackets,
-        -- timeout_startet = 0,
-        -- timeout_reached = 0,
-        -- drop_seq_no = 0,
-        -- missing = 0,
+
+        timeout_startet = 0,
+        timeout_reached = 0,
+        drop_seq_no = 0,
+        missing = 0,
     }
     if conf.mode == "IP" then
         print("Recombination in ip mode")
@@ -53,12 +54,13 @@ function Recombination:report()
     print(string.format("%20s # / %20s b in 2", lib.comma_value(in2_stats.txpackets), lib.comma_value(in2_stats.txbytes)))
     print(string.format("%20s # / %20s b out", lib.comma_value(output_stats.txpackets),
         lib.comma_value(output_stats.txbytes)))
-    -- print(string.format("%20s timeout started", lib.comma_value(self.timeout_startet)))
-    -- print(string.format("%20s timeout reached", lib.comma_value(self.timeout_reached)))
-    -- print(string.format("%20s timeout extended", lib.comma_value(self.timeout_extend)))
-    -- print(string.format("%20s dropped packages because of too low seq num",
-    --     lib.comma_value(self.drop_seq_no)))
-    -- print(string.format("%20s missing seq nums", lib.comma_value(self.missing)))
+
+    print(string.format("%20s timeout started", lib.comma_value(self.timeout_startet)))
+    print(string.format("%20s timeout reached", lib.comma_value(self.timeout_reached)))
+    print(string.format("%20s timeout extended", lib.comma_value(self.timeout_extend)))
+    print(string.format("%20s dropped packages because of too low seq num",
+        lib.comma_value(self.drop_seq_no)))
+    print(string.format("%20s missing seq nums", lib.comma_value(self.missing)))
 end
 
 function Recombination:push()
@@ -112,7 +114,7 @@ function Recombination:process_links(output)
                 break
             elseif ha_header.seq_no < self.next_pkt_num then
                 -- Discard packets with a smaller sequence number than expected
-                -- self.drop_seq_no = self.drop_seq_no + 1
+                self.drop_seq_no = self.drop_seq_no + 1 -- COUNTER
                 local p_real = receive(self.input[i])
                 free(p_real)
                 buffered_header = nil
@@ -125,7 +127,7 @@ function Recombination:process_links(output)
         end
         if buffered_header ~= nil then
             if not empty_link then
-                -- self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num)
+                self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num) -- COUNTER
                 self:process_packet(self.input[buffered_input_index], output, buffered_header)
                 self.wait_until = nil
             elseif self.wait_until ~= nil then
@@ -133,7 +135,7 @@ function Recombination:process_links(output)
                 break
             else
                 local current_time = C.get_time_ns()
-                -- self.timeout_startet = self.timeout_startet + 1
+                self.timeout_startet = self.timeout_startet + 1 -- COUNTER
                 self.wait_until = current_time + self:estimate_wait_time()
                 self.empty_links = self:get_empty_links()
                 break
@@ -157,7 +159,7 @@ function Recombination:process_waited(output)
         end
     end
     if buffered_header ~= nil then
-        -- self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num)
+        self.missing = self.missing + (buffered_header.seq_no - self.next_pkt_num) -- COUNTER
         self:process_packet(self.input[buffered_input_index], output, buffered_header)
     end
 end
@@ -170,7 +172,7 @@ function Recombination:continue_processing()
     local current_time = C.get_time_ns()
     if current_time >= self.wait_until then
         self.wait_until = nil
-        -- self.timeout_reached = self.timeout_reached + 1
+        self.timeout_reached = self.timeout_reached + 1 -- COUNTER
         return true, true
     else
         -- check if an empty link is no longer empty
