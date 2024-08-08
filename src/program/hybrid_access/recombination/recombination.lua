@@ -57,7 +57,6 @@ function Recombination:report()
 
     print(string.format("%20s timeout started", lib.comma_value(self.timeout_startet)))
     print(string.format("%20s timeout reached", lib.comma_value(self.timeout_reached)))
-    print(string.format("%20s timeout extended", lib.comma_value(self.timeout_extend)))
     print(string.format("%20s dropped packages because of too low seq num",
         lib.comma_value(self.drop_seq_no)))
     print(string.format("%20s missing seq nums", lib.comma_value(self.missing)))
