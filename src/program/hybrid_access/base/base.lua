@@ -64,10 +64,16 @@ end
 
 function report_links()
     print("link report:")
-    for name, l in pairs(engine.link_table) do
-       local txpackets = counter.read(l.stats.txpackets)
-       local txdrop = counter.read(l.stats.txdrop)
-       print(string.format("%20s sent / %20s drop on %s", lib.comma_value(txpackets), lib.comma_value(txdrop), name))
+
+    local names = {}
+    for name in pairs(engine.link_table) do table.insert(names, name) end
+    table.sort(names)
+
+    for _, name in ipairs(names) do
+        local l = engine.link_table[name]
+        local txpackets = counter.read(l.stats.txpackets)
+        local txdrop = counter.read(l.stats.txdrop)
+        print(string.format("%20s sent / %20s drop on %s", lib.comma_value(txpackets), lib.comma_value(txdrop), name))
     end
 end
 
