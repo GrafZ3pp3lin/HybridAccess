@@ -2,6 +2,7 @@ module(..., package.seeall)
 
 local engine = require("core.app")
 local link = require("core.link")
+local lib = require("core.lib")
 
 local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
 
@@ -35,7 +36,7 @@ function TokenBucketDDC:new(conf)
         o.additional_overhead = 7 + 1 + 4 + 12
     end
 
-    print(string.format("tokenbucket wrr: %20s byte/s, %20s capacity", o.byte_rate, o.capacity))
+    print(string.format("tokenbucket wrr: %20s byte/s, %20s capacity", lib.comma_value(o.byte_rate), lib.comma_value(o.capacity)))
 
     setmetatable(o, self)
     self.__index = self
