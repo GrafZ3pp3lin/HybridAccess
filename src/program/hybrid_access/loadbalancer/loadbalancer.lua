@@ -52,7 +52,7 @@ function LoadBalancer:send_pkt(pkt, l_out)
 end
 
 function LoadBalancer:send_pkt_with_ddc(pkt, l_out, l_delay)
-    local p_delay = self.hybrid_access:make_ddc_packet(self.sequence_number)
+    local p_delay = self.hybrid_access:make_ddc_packet(pkt, self.sequence_number)
     local p_new = self:build_packet(pkt, self.sequence_number + 1)
     if p_delay == nil or p_new == nil then
         return
