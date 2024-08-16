@@ -48,13 +48,14 @@ function TBRateLimiter:new(conf)
         buffer_capacity = conf.buffer_capacity,
         buffer_contingent = conf.buffer_capacity,
         additional_overhead = 0,
-
+        min_pkt_size = 64,
         -- txdrop = 0
     }
     if conf.additional_overhead ~= nil then
         o.additional_overhead = conf.additional_overhead
     elseif conf.layer1_overhead == true then
         o.additional_overhead = 7 + 1 + 4 + 12
+        o.min_pkt_size = 84
     end
     if conf.buffer_capacity > 0 then
         o.buffer = buffer.PacketBuffer:new(QUEUE_LENGTH)
@@ -125,7 +126,7 @@ function TBRateLimiter:send_from_buffer(buffer_size, iface_out)
     local send_from_buffer = min(buffer_size, nwritable(iface_out))
     for _ = 1, send_from_buffer do
         local p = self.buffer:peek()
-        local length = max(p.length, 60) + self.additional_overhead
+        local length = max(p.length + self.additional_overhead, self.min_pkt_size)
         if length <= self.bucket_contingent then
             self.buffer:dequeue()
             -- move packets from buffer to bucket
@@ -141,7 +142,7 @@ function TBRateLimiter:send_from_link(incoming, iface_in, iface_out)
     local send_from_link = min(incoming, nwritable(iface_out))
     for _ = 1, send_from_link do
         local p = receive(iface_in)
-        local length = max(p.length, 60) + self.additional_overhead
+        local length = max(p.length + self.additional_overhead, self.min_pkt_size)
         if length <= self.bucket_contingent then
             self.bucket_contingent = self.bucket_contingent - length
             transmit(iface_out, p)
@@ -161,7 +162,7 @@ function TBRateLimiter:store_in_buffer(iface_in)
     local incoming = nreadable(iface_in)
     for _ = 1, incoming do
         local p = receive(iface_in)
-        local length = max(p.length, 60) + self.additional_overhead
+        local length = max(p.length + self.additional_overhead, self.min_pkt_size)
         if length <= self.buffer_contingent then
             -- check if packet can be buffered
             self.buffer_contingent = self.buffer_contingent - length

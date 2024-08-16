@@ -35,10 +35,12 @@ function TokenBucket:new(conf)
         capacity = math.floor(conf.capacity * cp),
         contingent = conf.capacity,
         additional_overhead = co.HA_HEADER_LEN,
+        min_pkt_size = 64,
         class_type = "TokenBucket"
     }
     if conf.layer1_overhead == true then
         o.additional_overhead = o.additional_overhead + 7 + 1 + 4 + 12
+        o.min_pkt_size = 84
     end
     print(string.format("tokenbucket: %20s byte/s (%i%%), %20s capacity (%i%%)", lib.comma_value(o.byte_rate), conf.rate_percentage, lib.comma_value(o.capacity), conf.capacity_percentage))
     setmetatable(o, self)
@@ -67,7 +69,7 @@ function TokenBucket:push()
 
     while not empty(iface_in) do
         local p = receive(iface_in)
-        local length = max(p.length, 60) + self.additional_overhead
+        local length = max(p.length + self.additional_overhead, self.min_pkt_size)
 
         if length <= self.contingent then
             self.contingent = self.contingent - length
