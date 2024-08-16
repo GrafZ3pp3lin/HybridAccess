@@ -108,19 +108,19 @@ end
 
 function resolve_time(time_str)
     local lower_time_str = string.lower(time_str)
-    local time_value = string.match(lower_time_str, "^(%d+)ms$")
+    local time_value = string.match(lower_time_str, "^([%d%.]+)ms$")
     if time_value then
         return tonumber(time_value) * 1e6
     end
-    time_value = string.match(lower_time_str, "^(%d+)us$")
+    time_value = string.match(lower_time_str, "^([%d%.]+)us$")
     if time_value then
         return tonumber(time_value) * 1e3
     end
-    time_value = string.match(lower_time_str, "^(%d+)ns$")
+    time_value = string.match(lower_time_str, "^([%d%.]+)ns$")
     if time_value then
         return tonumber(time_value)
     end
-    time_value = string.match(lower_time_str, "^(%d+)s$")
+    time_value = string.match(lower_time_str, "^([%d%.]+)s$")
     if time_value then
         return tonumber(time_value) * 1e9
     end
@@ -129,19 +129,19 @@ end
 
 function resolve_bandwidth(bandwidth_str)
     local lower_bandwidth_str = string.lower(bandwidth_str)
-    local bandwidth_value = string.match(lower_bandwidth_str, "^(%d+)gbit$")
+    local bandwidth_value = string.match(lower_bandwidth_str, "^([%d%.]+)gbit$")
     if bandwidth_value then
         return tonumber(bandwidth_value) * 1e9
     end
-    bandwidth_value = string.match(lower_bandwidth_str, "^(%d+)mbit$")
+    bandwidth_value = string.match(lower_bandwidth_str, "^([%d%.]+)mbit$")
     if bandwidth_value then
         return tonumber(bandwidth_value) * 1e6
     end
-    bandwidth_value = string.match(lower_bandwidth_str, "^(%d+)kbit$")
+    bandwidth_value = string.match(lower_bandwidth_str, "^([%d%.]+)kbit$")
     if bandwidth_value then
         return tonumber(bandwidth_value) * 1e3
     end
-    bandwidth_value = string.match(lower_bandwidth_str, "^(%d+)bit$")
+    bandwidth_value = string.match(lower_bandwidth_str, "^([%d%.]+)bit$")
     if bandwidth_value then
         return tonumber(bandwidth_value)
     end
@@ -150,15 +150,15 @@ end
 
 function resolve_number(number_str)
     local lower_number_str = string.lower(number_str)
-    local number_value = string.match(lower_number_str, "^(%d+)g$")
+    local number_value = string.match(lower_number_str, "^([%d%.]+)g$")
     if number_value then
         return tonumber(number_value) * 1e9
     end
-    number_value = string.match(lower_number_str, "^(%d+)m$")
+    number_value = string.match(lower_number_str, "^([%d%.]+)m$")
     if number_value then
         return tonumber(number_value) * 1e6
     end
-    number_value = string.match(lower_number_str, "^(%d+)k$")
+    number_value = string.match(lower_number_str, "^([%d%.]+)k$")
     if number_value then
         return tonumber(number_value) * 1e3
     end

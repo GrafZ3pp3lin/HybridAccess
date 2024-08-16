@@ -18,9 +18,9 @@ TokenBucketDDC.config = {
     -- amount of tokens
     capacity        = { required = true },
     -- multiply rate by this percentage
-    rate_percentage      = { default = 99 },
+    rate_percentage      = { default = 95 },
     -- multiply capacity by this percentage
-    capacity_percentage      = { default = 75 },
+    capacity_percentage      = { default = 99 },
     -- use layer 1 overhead
     layer1_overhead = { default = true },
     -- loadbalancer setup

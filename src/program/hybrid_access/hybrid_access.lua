@@ -153,11 +153,13 @@ local function parse_cli(str, cfg)
     local overwrites = {};
 
     for i in string.gmatch(str, "([^;]+)") do
-        local k, v = string.match(i, "^-(%w+)=\"?(%w+)\"?$")
+        local k, v = string.match(i, "^-(%w+)=\"?([%w%.]+)\"?$")
         if k and v then
             overwrites[k] = v
         end
     end
+
+    print(base.dump(overwrites))
 
     for key, value in pairs(overwrites) do
         if (key == "d1" or key == "delay1") and cfg.link1.delayer ~= nil then
