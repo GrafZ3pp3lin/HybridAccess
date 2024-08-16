@@ -17,8 +17,10 @@ TokenBucketDDC.config = {
     rate            = { required = true },
     -- amount of tokens
     capacity        = { required = true },
-    -- multiply rate and capacity by this percentage
-    percentage      = { default = 95 },
+    -- multiply rate by this percentage
+    rate_percentage      = { default = 99 },
+    -- multiply capacity by this percentage
+    capacity_percentage      = { default = 75 },
     -- use layer 1 overhead
     layer1_overhead = { default = true },
     -- loadbalancer setup
@@ -26,10 +28,11 @@ TokenBucketDDC.config = {
 }
 
 function TokenBucketDDC:new(conf)
-    local rp = conf.percentage / 100
+    local rp = conf.rate_percentage / 100
+    local cp = conf.capacity_percentage / 100
     local o = {
         byte_rate = math.floor((conf.rate * rp) / 8),
-        capacity = math.floor(conf.capacity * rp),
+        capacity = math.floor(conf.capacity * cp),
         contingent = conf.capacity,
         additional_overhead = co.HA_HEADER_LEN,
         class_type = "TokenBucket with delay difference compensation"
@@ -38,7 +41,7 @@ function TokenBucketDDC:new(conf)
         o.additional_overhead = o.additional_overhead + 7 + 1 + 4 + 12
     end
 
-    print(string.format("tokenbucket ddc: %20s byte/s, %20s capacity", lib.comma_value(o.byte_rate), lib.comma_value(o.capacity)))
+    print(string.format("tokenbucket ddc: %20s byte/s (%i%%), %20s capacity (%i%%)", lib.comma_value(o.byte_rate), conf.rate_percentage, lib.comma_value(o.capacity), conf.capacity_percentage))
 
     setmetatable(o, self)
     self.__index = self
