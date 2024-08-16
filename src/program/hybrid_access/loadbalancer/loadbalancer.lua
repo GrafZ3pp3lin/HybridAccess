@@ -6,8 +6,7 @@ local lib = require("core.lib")
 
 local co = require("program.hybrid_access.base.constants")
 
-local ETHER_HEADER_LEN, GET_ETHER_TYPE =
-    co.ETHER_HEADER_LEN, co.GET_ETHER_TYPE
+local GET_ETHER_TYPE = co.GET_ETHER_TYPE
 
 local transmit = link.transmit
 
@@ -32,21 +31,15 @@ function LoadBalancer:setup(cfg)
 end
 
 function LoadBalancer:build_packet(p, sequence_number)
-    if p.length >= ETHER_HEADER_LEN then
-        -- get eth_type of packet
-        local buf_type = GET_ETHER_TYPE(p)
-        -- make new packet with room for hybrid access header
-        return self.hybrid_access:add_header(p, sequence_number, buf_type)
-    else
-        return nil
-    end
+    -- assert(p.length >= ETHER_HEADER_LEN, "packet does not have a ethernet header, it is to short")
+    -- get eth_type of packet
+    local buf_type = GET_ETHER_TYPE(p)
+    -- make new packet with room for hybrid access header
+    return self.hybrid_access:add_header(p, sequence_number, buf_type)
 end
 
 function LoadBalancer:send_pkt(pkt, l_out)
     local p_new = self:build_packet(pkt, self.sequence_number)
-    if p_new == nil then
-        return
-    end
     self.sequence_number = self.sequence_number + 1
     transmit(l_out, p_new)
 end
@@ -54,9 +47,6 @@ end
 function LoadBalancer:send_pkt_with_ddc(pkt, l_out, l_delay)
     local p_delay = self.hybrid_access:make_ddc_packet(pkt, self.sequence_number)
     local p_new = self:build_packet(pkt, self.sequence_number + 1)
-    if p_delay == nil or p_new == nil then
-        return
-    end
     self.sequence_number = self.sequence_number + 2
     transmit(l_delay, p_delay)
     transmit(l_out, p_new)

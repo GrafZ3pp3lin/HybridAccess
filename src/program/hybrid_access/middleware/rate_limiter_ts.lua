@@ -12,7 +12,7 @@ local lib = require("core.lib")
 local buffer = require("program.hybrid_access.base.buffer")
 local ts = require("program.hybrid_access.base.timestamp")
 
-local min, ceil = math.min, math.ceil
+local min = math.min
 local tonumber = tonumber
 local receive, transmit, nreadable, nwritable = link.receive, link.transmit, link.nreadable, link.nwritable
 local free = packet.free
@@ -104,7 +104,7 @@ function RateLimiterTS:push()
     local last_time = self.last_time or cur_now
     local interval = cur_now - last_time
     self.bucket_contingent = min(
-        self.bucket_contingent + ceil(self.byte_rate * interval),
+        self.bucket_contingent + self.byte_rate * interval,
         self.bucket_capacity
     )
     self.last_time = cur_now
@@ -138,7 +138,7 @@ function RateLimiterTS:send_from_buffer(buffer_size, iface_out)
     local send_from_buffer = min(buffer_size, nwritable(iface_out))
     for _ = 1, send_from_buffer do
         local p = self.buffer:peek()
-        local length = p.length + self.additional_overhead
+        local length = min(p.length, 60) + self.additional_overhead
         if length <= self.bucket_contingent then
             self.buffer:dequeue()
             -- move packets from buffer to bucket
@@ -157,7 +157,7 @@ function RateLimiterTS:send_from_link(incoming, iface_in, iface_out, timestamp)
         if self.timestamp == true and p.length + 9 <= max_payload then
             ts.append_timestamp(p, timestamp)
         end
-        local length = p.length + self.additional_overhead
+        local length = min(p.length, 60) + self.additional_overhead
         if length <= self.bucket_contingent then
             self.bucket_contingent = self.bucket_contingent - length
             transmit(iface_out, p)
@@ -180,7 +180,7 @@ function RateLimiterTS:store_in_buffer(iface_in, timestamp)
         if self.timestamp == true and p.length + 9 <= max_payload then
             ts.append_timestamp(p, timestamp)
         end
-        local length = p.length + self.additional_overhead
+        local length = min(p.length, 60) + self.additional_overhead
         if length <= self.buffer_contingent then
             -- check if packet can be buffered
             self.buffer_contingent = self.buffer_contingent - length

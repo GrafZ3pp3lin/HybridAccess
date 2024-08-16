@@ -5,6 +5,7 @@ local link = require("core.link")
 local lib = require("core.lib")
 
 local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
+local co = require("program.hybrid_access.base.constants")
 
 local min = math.min
 local tonumber = tonumber
@@ -17,7 +18,7 @@ TokenBucketDDC.config = {
     -- amount of tokens
     capacity        = { required = true },
     -- multiply rate and capacity by this percentage
-    percentage      = { default = 99 },
+    percentage      = { default = 95 },
     -- use layer 1 overhead
     layer1_overhead = { default = true },
     -- loadbalancer setup
@@ -30,10 +31,11 @@ function TokenBucketDDC:new(conf)
         byte_rate = math.floor((conf.rate * rp) / 8),
         capacity = math.floor(conf.capacity * rp),
         contingent = conf.capacity,
+        additional_overhead = co.HA_HEADER_LEN,
         class_type = "TokenBucket with delay difference compensation"
     }
     if conf.layer1_overhead == true then
-        o.additional_overhead = 7 + 1 + 4 + 12
+        o.additional_overhead = o.additional_overhead + 7 + 1 + 4 + 12
     end
 
     print(string.format("tokenbucket ddc: %20s byte/s, %20s capacity", lib.comma_value(o.byte_rate), lib.comma_value(o.capacity)))
@@ -64,7 +66,7 @@ function TokenBucketDDC:push()
 
     while not empty(iface_in) do
         local p = receive(iface_in)
-        local length = p.length + self.additional_overhead
+        local length = min(p.length, 60) + self.additional_overhead
 
         if length <= self.contingent then
             self.contingent = self.contingent - length

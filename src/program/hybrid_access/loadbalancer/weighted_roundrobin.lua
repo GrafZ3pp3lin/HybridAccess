@@ -3,6 +3,8 @@ module(..., package.seeall)
 local link = require("core.link")
 local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
 
+local empty, receive = link.empty, link.receive
+
 WeightedRoundRobin = loadbalancer.LoadBalancer:new()
 WeightedRoundRobin.config = {
     -- link bandwidths
@@ -37,24 +39,20 @@ function WeightedRoundRobin:new(conf)
 end
 
 function WeightedRoundRobin:push()
-    local i = assert(self.input.input, "input port not found")
-    local o1 = assert(self.output.output1, "output port 1 not found")
-    local o2 = assert(self.output.output2, "output port 2 not found")
+    local iface_in = assert(self.input.input, "input port not found")
+    local iface_out1 = assert(self.output.output1, "output port 1 not found")
+    local iface_out2 = assert(self.output.output2, "output port 2 not found")
 
-    for _ = 1, link.nreadable(i) do
-        self:process_packet(i, o1, o2)
+    while not empty(iface_in) do
+        local p = receive(iface_in)
+        if self.index < self.w1 then
+            self:send_pkt(p, iface_out1)
+        elseif self.index < self.w2 then
+            self:send_pkt(p, iface_out2)
+        else
+            self.index = 0
+            self:send_pkt(p, iface_out1)
+        end
+        self.index = self.index + 1
     end
-end
-
-function WeightedRoundRobin:process_packet(i, o1, o2)
-    local p = link.receive(i)
-    if self.index < self.w1 then
-        self:send_pkt(p, o1)
-    elseif self.index < self.w2 then
-        self:send_pkt(p, o2)
-    else
-        self.index = 0
-        self:send_pkt(p, o1)
-    end
-    self.index = self.index + 1
 end

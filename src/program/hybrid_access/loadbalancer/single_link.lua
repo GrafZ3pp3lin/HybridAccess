@@ -3,6 +3,8 @@ module(..., package.seeall)
 local link = require("core.link")
 local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
 
+local empty, receive = link.empty, link.receive
+
 SingleLink = loadbalancer.LoadBalancer:new()
 SingleLink.config = {
     setup = { required = false }
@@ -19,11 +21,11 @@ function SingleLink:new(conf)
 end
 
 function SingleLink:push()
-    local i = assert(self.input.input, "input port not found")
-    local o1 = assert(self.output.output1, "output port 1 not found")
+    local iface_in = assert(self.input.input, "input port not found")
+    local iface_out1 = assert(self.output.output1, "output port 1 not found")
 
-    for _ = 1, link.nreadable(i) do
-        local p = link.receive(i)
-        self:send_pkt(p, o1)
+    while not empty(iface_in) do
+        local p = receive(iface_in)
+        self:send_pkt(p, iface_out1)
     end
 end
