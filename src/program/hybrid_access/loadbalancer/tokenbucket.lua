@@ -7,7 +7,7 @@ local lib = require("core.lib")
 local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
 local co = require("program.hybrid_access.base.constants")
 
-local min = math.min
+local min, max = math.min, math.max
 local tonumber = tonumber
 local empty, receive = link.empty, link.receive
 
@@ -64,7 +64,7 @@ function TokenBucket:push()
 
     while not empty(iface_in) do
         local p = receive(iface_in)
-        local length = min(p.length, 60) + self.additional_overhead
+        local length = max(p.length, 60) + self.additional_overhead
 
         if length <= self.contingent then
             self.contingent = self.contingent - length
