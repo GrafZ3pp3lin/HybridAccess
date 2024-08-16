@@ -42,7 +42,7 @@ function TokenBucket:new(conf)
         o.additional_overhead = o.additional_overhead + 7 + 1 + 4 + 12
         o.min_pkt_size = 84
     end
-    print(string.format("tokenbucket: %20s byte/s (%i%%), %20s capacity (%i%%)", lib.comma_value(o.byte_rate), conf.rate_percentage, lib.comma_value(o.capacity), conf.capacity_percentage))
+    print(string.format("tokenbucket: %20s byte/s (%f%%), %20s capacity (%f%%)", lib.comma_value(o.byte_rate), conf.rate_percentage, lib.comma_value(o.capacity), conf.capacity_percentage))
     setmetatable(o, self)
     self.__index = self
     o:setup(conf.setup)
