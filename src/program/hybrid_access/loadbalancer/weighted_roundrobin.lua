@@ -5,6 +5,16 @@ local loadbalancer = require("program.hybrid_access.loadbalancer.loadbalancer")
 
 local empty, receive = link.empty, link.receive
 
+local function gcd(a, b)
+    if b == 0 then
+        return a
+    elseif a > b then
+        return gcd(b, a % b)
+    else
+        return gcd(a, b % a)
+    end
+end
+
 WeightedRoundRobin = loadbalancer.LoadBalancer:new()
 WeightedRoundRobin.config = {
     -- link bandwidths
@@ -15,16 +25,11 @@ WeightedRoundRobin.config = {
 function WeightedRoundRobin:new(conf)
     local b1 = conf.bandwidths.output1
     local b2 = conf.bandwidths.output2
-    local w1, w2 = 0, 0
-    if b1 % b2 == 0 then
-        w1 = b1 / b2
-        w2 = w1 + 1
-    elseif b2 % b1 == 0 then
-        w1 = 1
-        w2 = w1 + (b2 / b1)
-    else
-        error("bandwidths must be divisible without remainder")
-    end
+
+    local temp_gcd = gcd(b1, b2)
+    local w1 = b1 / temp_gcd
+    local w2 = w1 + (b2 / temp_gcd)
+
     print(string.format("weighted roundrobin: %i link1 / %i link2", w1, w2 - w1))
     local o = {
         index = 0,
