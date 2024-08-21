@@ -11,7 +11,7 @@ local HYBRID_ACCESS_TYPE = co.HYBRID_ACCESS_TYPE
 
 local C = ffi.C
 
-local transmit, receive, empty, front = link.transmit, link.receive, link.empty, link.front
+local transmit, receive, empty = link.transmit, link.receive, link.empty
 local free = packet.free
 
 Recombination = {}
@@ -25,10 +25,7 @@ function Recombination:new(conf)
     local o = {
         ordered_input = {},
         next_seq_no = ffi.new("uint64_t", 0),
-        link_delays = conf.link_delays,
-        wait_until_time = nil,
-        wait_until_seq_no = ffi.new("uint64_t", 0),
-        empty_link = nil,
+        link_timeouts = conf.link_delays,
         pull_npackets = conf.pull_npackets,
 
         -- timeout_startet = 0,
@@ -46,7 +43,7 @@ function Recombination:new(conf)
         print("Recombination in eth mode")
         self.hybrid_access = require("program.hybrid_access.base.hybrid_access").HybridAccess:new()
     end
-    print(string.format("%fms link delay for link 1, %fms link delay for link 2", o.link_delays[1] / 1e6, o.link_delays[2] / 1e6))
+    print(string.format("%fms link delay for link 1, %fms link delay for link 2", o.link_timeouts[1] / 1e6, o.link_timeouts[2] / 1e6))
     setmetatable(o, self)
     self.__index = self
     
@@ -83,14 +80,14 @@ function Recombination:link(in_or_out, l_name)
     self.ordered_input[index] = self.input[l_name]
 end
 
-function Recombination:fetch_links()
-    local current_time = C.get_time_ns()
+function Recombination:fetch_links(current_time)
     for i = 1, 2, 1 do
         local iface_in = self.ordered_input[i]
         local buf = self.buffer[i]
+        local timeout = current_time + self.link_timeouts[i]
         while not empty(iface_in) do
             local pkt = receive(iface_in)
-            if buf.enqueue(pkt, current_time) == 0 then
+            if buf.enqueue(pkt, timeout) == 0 then
                 free(pkt)
                 break
             end
@@ -103,23 +100,17 @@ function Recombination:fetch_links()
 end
 
 function Recombination:push()
+    local current_time = C.get_time_ns()
+
     -- fetch and buffer packets from links
-    self:fetch_links()
+    self:fetch_links(current_time)
 
-    local mode = 1
-    if self.wait_until_time ~= nil then
-        mode = self:get_processing_mode()
-    end
-
+    -- process packets on links
     local output_link = self.output.output
+    self:process_links(output_link)
 
-    if mode == 1 then
-        -- process links normally
-        self:process_links(output_link)
-    elseif mode == 2 then
-        -- timeout occured & one link is empty
-        self:process_timeout(output_link)
-    end
+    -- check for timeouts
+    self:process_timeout(current_time, output_link)
 end
 
 ---Process packets.
@@ -147,10 +138,6 @@ function Recombination:process_links(output_link)
                 any_link_empty = true
             elseif ha_header.seq_no == self.next_seq_no then
                 -- found expected packet
-                if ha_header.seq_no >= self.wait_until_seq_no then
-                    -- reset timeout if preceding packet has arrived
-                    self.wait_until_time = nil
-                end
                 self:process_packet(self.buffer[i], output_link, ha_header)
                 buffered_header = nil
                 break
@@ -169,27 +156,9 @@ function Recombination:process_links(output_link)
         end
         if buffered_header ~= nil then
             if not any_link_empty then
-                -- forward packet with lower sequence number
-                if buffered_header.seq_no >= self.wait_until_seq_no then
-                    -- reset timeout if preceding packet has arrived
-                    self.wait_until_time = nil
-                end
-                -- self.missing = self.missing + (buffered_header.seq_no - self.next_seq_no) -- COUNTER
                 self:process_packet(self.buffer[buffered_input_index], output_link, buffered_header)
-            elseif self.wait_until_time ~= nil then
-                -- we wait already for another packet
-                break
             else
-                -- there is one empty link and a paket with an unexpected sequence number on the other link.
-                -- wait till either:
-                -- - preceding packet arrives
-                -- - timeout
-                local empty_link_index = 3 - buffered_input_index -- either 1 or 2
-                local pkt_ts = self.buffer[buffered_input_index]:peek()
-                -- self.timeout_startet = self.timeout_startet + 1 -- COUNTER
-                self.wait_until_time = pkt_ts.timestamp + self.link_delays[empty_link_index]
-                self.wait_until_seq_no = buffered_header.seq_no - 1
-                self.empty_link = empty_link_index
+                -- break while loop
                 break
             end
         end
@@ -199,48 +168,30 @@ end
 ---Process packets after timeout.
 ---Forward all packets with timeout reached 
 ---@param output_link any output link
-function Recombination:process_timeout(output_link)
-    local buf = self.buffer[3 - self.empty_link]
-    local current_time = C.get_time_ns()
-
-    -- forward all packets where the timeout is reached
-    while not buf:is_empty() do
-        local pkt_ts = buf:peek()
-        if pkt_ts.timestamp > current_time then
-            break
+function Recombination:process_timeout(current_time, output_link)
+    for i = 1, 2, 1 do
+        local other_buf = 3 - i
+        local init = true
+        local other_header = nil
+        while not self.buffer[i]:is_empty() do
+            local p = self.buffer[i]:peek()
+            if p.timestamp <= current_time then
+                local ref_header = self.hybrid_access:get_header(p.packet)
+                -- check on other link for packets with lower seq no
+                if init == true then
+                    other_header = self:read_next_hybrid_access_pkt(self.buffer[other_buf], output_link)
+                    init = false
+                end
+                while other_header ~= nil and other_header.seq_no < ref_header.seq_no do
+                    self:process_packet(self.buffer[other_buf], output_link, other_header)
+                    other_header = self:read_next_hybrid_access_pkt(self.buffer[other_buf], output_link)
+                end
+                self:process_packet(self.buffer[i], output_link, ref_header)
+            else
+                break
+            end
         end
-        local ha_header = self.hybrid_access:get_header(pkt_ts.packet)
-        if ha_header ~= nil and ha_header.seq_no >= self.next_seq_no then
-            self:process_packet(buf, output_link, ha_header)
-        elseif ha_header ~= nil and ha_header.seq_no >= self.next_seq_no then
-            local pkt_ts_real = buf:dequeue()
-            free(pkt_ts_real.packet)
-        else
-            local pkt_ts_real = buf:dequeue()
-            transmit(output_link, pkt_ts_real.packet)
-        end
     end
-end
-
----Checks if processing packets should be continued or we still have to wait for the next packet.
----Checks if timeout is reached or new packets arrived.
----@return integer mode continue mode
-function Recombination:get_processing_mode()
-    -- check if packet on the empty link has arrived
-    if not self.buffer[self.empty_link]:is_empty() then
-        -- empty link is no longer empty
-        return 1
-    end
-    -- check if timeout is reached
-    local current_time = C.get_time_ns()
-    if current_time >= self.wait_until_time then
-        -- timeout reached
-        self.wait_until_time = nil
-        -- self.timeout_reached = self.timeout_reached + 1 -- COUNTER
-        return 2
-    end
-
-    return 0
 end
 
 ---read next hybrid access packet from input link.
