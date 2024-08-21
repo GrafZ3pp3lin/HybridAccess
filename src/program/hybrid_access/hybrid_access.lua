@@ -71,24 +71,9 @@ local function generate_config(cfg)
 
     config.app(c, "forwarder_in", forwarder.MacForwarder, cfg.input.forwarder)
 
-    local node_out1 = "link_out1.output"
-    local node_out2 = "link_out2.output"
-
     -- recombination
-
-    if cfg.recombination_buffer == true then
-        config.app(c, "buffer_1", buffer.Buffer, 65536)
-        config.app(c, "buffer_2", buffer.Buffer, 65536)
-
-        config.link(c, node_out1 .. " -> buffer_1.input")
-        config.link(c, node_out2 .. " -> buffer_2.input")
-
-        config.link(c, "buffer_1.output -> recombination.input1")
-        config.link(c, "buffer_2.output -> recombination.input2")
-    else
-        config.link(c, node_out1 .. " -> recombination.input1")
-        config.link(c, node_out2 .. " -> recombination.input2")
-    end
+    config.link(c, "link_out1.output -> recombination.input1")
+    config.link(c, "link_out2.output -> recombination.input2")
 
     if cfg.print_file ~= nil then
         config.app(c, "printer", printer.Printer, { bytes = true, file = cfg.print_file })
