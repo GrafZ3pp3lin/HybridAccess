@@ -121,13 +121,13 @@ end
 function Recombination:process_links(output_link)
     local buffered_input_index = 0
     local buffered_header = nil
-    local any_link_empty = false
+    local exists_empty_link = false
 
     local pulled = 0
 
     -- while at least one packet exists
     while (not self.buffer[1]:is_empty() or not self.buffer[2]:is_empty()) and pulled < self.pull_npackets do
-        any_link_empty = false
+        exists_empty_link = false
         buffered_header = nil
         pulled = pulled + 1
         -- iterate over all links
@@ -135,7 +135,7 @@ function Recombination:process_links(output_link)
             local ha_header = self:read_next_hybrid_access_pkt(self.buffer[i], output_link)
             if ha_header == nil then
                 -- found no hybrid access packet on that link
-                any_link_empty = true
+                exists_empty_link = true
             elseif ha_header.seq_no == self.next_seq_no then
                 -- found expected packet
                 self:process_packet(self.buffer[i], output_link, ha_header)
@@ -155,7 +155,7 @@ function Recombination:process_links(output_link)
             end
         end
         if buffered_header ~= nil then
-            if not any_link_empty then
+            if not exists_empty_link then
                 self:process_packet(self.buffer[buffered_input_index], output_link, buffered_header)
             else
                 -- break while loop
@@ -230,6 +230,7 @@ function Recombination:process_packet(buf, output_link, ha_header)
         local pkt = self.hybrid_access:remove_header(pkt_ts.packet, ha_header.buf_type) -- DO NOT ACCESS ha_header after this, because memory gets overwritten here
         transmit(output_link, pkt)
     else
+        -- drop packet (ddc)
         free(pkt_ts.packet)
     end
 end
