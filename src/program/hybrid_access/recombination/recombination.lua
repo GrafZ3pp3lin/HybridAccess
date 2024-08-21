@@ -87,7 +87,7 @@ function Recombination:fetch_links(current_time)
         local timeout = current_time + self.link_timeouts[i]
         while not empty(iface_in) do
             local pkt = receive(iface_in)
-            if buf.enqueue(pkt, timeout) == 0 then
+            if buf:enqueue(pkt, timeout) == 0 then
                 free(pkt)
                 break
             end
