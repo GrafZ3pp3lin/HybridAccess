@@ -19,7 +19,7 @@ PacketWithTimestampBuffer = {}
 
 function PacketWithTimestampBuffer:new(size)
     assert(band(size, (size - 1)) == 0, "size must be a power of two")
-    local buf = ffi.new("struct ts_packet *[?]", size)
+    local buf = ffi.new("struct ts_packet[?]", size)
     local o = {
         buffer = buf,
         read = 0,
