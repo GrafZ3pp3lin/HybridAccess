@@ -95,7 +95,7 @@ function RateLimiterTS:push()
     if self.buffer ~= nil then
         buffer_size = self.buffer:size()
     end
-    local incoming = link.nreadable(iface_in)
+    local incoming = nreadable(iface_in)
     if incoming == 0 and buffer_size == 0 then
         return
     end
