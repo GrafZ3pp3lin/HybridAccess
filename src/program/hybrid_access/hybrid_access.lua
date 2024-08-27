@@ -200,8 +200,6 @@ local function parse_cli(str, cfg)
                 cfg.link2.rate_limiter.timestamp = base.resolve_bool(value)
                 cfg.link2.delayer.timestamp = base.resolve_bool(value)
             end
-        elseif (key == "rb" or key == "recombination_buffer") then
-            cfg.recombination_buffer = base.resolve_bool(value)
         elseif (key == "rd1" or key == "rec_delay1") then
             cfg.recombination.config.link_delays[1] = base.resolve_time(value)
         elseif key == "rd2" or key == "rec_delay2" then
