@@ -220,6 +220,9 @@ local function parse_cli(str, cfg)
             elseif value == "tbddc" or value == "tokenbucket_ddc" then
                 cfg.loadbalancer.path = "program.hybrid_access.loadbalancer.tokenbucket_ddc"
                 cfg.loadbalancer.type = "TokenBucketDDC"
+            elseif value == "tbddcs" or value == "tokenbucket_ddc_series" then
+                cfg.loadbalancer.path = "program.hybrid_access.loadbalancer.tokenbucket_ddc_series"
+                cfg.loadbalancer.type = "TokenBucketDDCSeries"
             end
         elseif key == "wrrb1" or value == "wrr_bandwidth1" then
             if not cfg.loadbalancer.config.bandwidths then
@@ -239,6 +242,10 @@ local function parse_cli(str, cfg)
             cfg.loadbalancer.config.rate_percentage = tonumber(value)
         elseif key == "tbcp" or value == "tb_capacity_percentage" then
             cfg.loadbalancer.config.capacity_percentage = tonumber(value)
+        elseif  key == "tbdl" or value == "tb_ddc_link" then
+            cfg.loadbalancer.config.ddc_link = tonumber(value)
+        elseif  key == "tbdc" or value == "tb_ddc_cache" then
+            cfg.loadbalancer.config.ddc_cache = base.resolve_time(value)
         end
     end
 end
