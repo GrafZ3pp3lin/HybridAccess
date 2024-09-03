@@ -244,8 +244,16 @@ local function parse_cli(str, cfg)
             cfg.loadbalancer.config.capacity_percentage = tonumber(value)
         elseif  key == "tbdl" or value == "tb_ddc_link" then
             cfg.loadbalancer.config.ddc_link = tonumber(value)
-        elseif  key == "tbdc" or value == "tb_ddc_cache" then
-            cfg.loadbalancer.config.ddc_cache = base.resolve_time(value)
+        elseif  key == "tbdc1" or value == "tb_ddc_cache_1" then
+            if not cfg.loadbalancer.config.ddc_cache then
+                cfg.loadbalancer.config.ddc_cache = {}
+            end
+            cfg.loadbalancer.config.ddc_cache[1] = base.resolve_time(value)
+        elseif  key == "tbdc2" or value == "tb_ddc_cache_2" then
+            if not cfg.loadbalancer.config.ddc_cache then
+                cfg.loadbalancer.config.ddc_cache = {}
+            end
+            cfg.loadbalancer.config.ddc_cache[2] = base.resolve_time(value)
         end
     end
 end

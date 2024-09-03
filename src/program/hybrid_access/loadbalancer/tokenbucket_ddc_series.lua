@@ -25,8 +25,8 @@ TokenBucketDDCSeries.config = {
     layer1_overhead = { default = true },
     -- link where ddc packets should be send (link with higher one-way delay)
     ddc_link = { required = true },
-    -- how long is one ddc packet valid (difference between one-way delays)
-    ddc_cache = { required = true},
+    -- how long is one ddc packet valid
+    ddc_cache = { required = false },
     -- loadbalancer setup
     setup    = { required = false }
 }
@@ -34,7 +34,10 @@ TokenBucketDDCSeries.config = {
 function TokenBucketDDCSeries:new(conf)
     local rp = conf.rate_percentage / 100
     local cp = conf.capacity_percentage / 100
-    local ddcc = conf.ddc_cache / 1e9
+    -- local corrected_ddc_cache = {}
+    -- for i, value in ipairs(conf.ddc_cache) do
+    --     corrected_ddc_cache[i] = value / 1e9
+    -- end
     local o = {
         byte_rate = math.floor((conf.rate * rp) / 8),
         capacity = math.floor(conf.capacity * cp),
@@ -42,8 +45,9 @@ function TokenBucketDDCSeries:new(conf)
         additional_overhead = co.HA_HEADER_LEN,
         min_pkt_size = 64,
         ddc_link = conf.ddc_link,
-        ddc_cache = ddcc,
-        ddc_last_send = false,
+        last_ddc_send = 0,
+        -- ddc_cache = corrected_ddc_cache,
+        -- last_ddc_time = {},
         class_type = "TokenBucket with delay difference compensation"
     }
     if conf.layer1_overhead == true then
@@ -77,10 +81,10 @@ function TokenBucketDDCSeries:push()
     )
     self.last_time = cur_now
 
-    local last_ddc_time = self.last_ddc_time or cur_now
-    if last_ddc_time + self.ddc_cache <= cur_now then
-        self.ddc_last_send = 0
-    end
+    -- local send_ddc_1 = (self.ddc_link == 1 or self.ddc_link == 0) and (self.last_ddc_time[1] or cur_now) + self.ddc_cache[1] <= cur_now
+    -- local send_ddc_2 = (self.ddc_link == 2 or self.ddc_link == 0) and (self.last_ddc_time[2] or cur_now) + self.ddc_cache[2] <= cur_now
+    local send_ddc_1 = self.ddc_link == 1 or self.ddc_link == 0
+    local send_ddc_2 = self.ddc_link == 2 or self.ddc_link == 0
 
     while not empty(iface_in) do
         local p = receive(iface_in)
@@ -88,21 +92,22 @@ function TokenBucketDDCSeries:push()
 
         if length <= self.contingent then
             self.contingent = self.contingent - length
-            if self.ddc_last_send == 2 or self.ddc_link == 1 then
-                -- either ddc was already send OR ddc link is not 2 (nor 0)
+            if self.last_ddc_send == 2 or send_ddc_2 == false then
                 self:send_pkt(p, iface_out1)
             else
                 self:send_pkt_with_ddc(p, iface_out1, iface_out2)
-                self.ddc_last_send = 2
-                self.last_ddc_time = cur_now
+                self.last_ddc_send = 2
+                -- send_ddc_2 = false
+                -- self.last_ddc_time[2] = cur_now
             end
-        elseif self.ddc_last_send == 1 or self.ddc_link == 2 then
+        elseif self.last_ddc_send == 1 or send_ddc_1 == false then
             self.send_pkt(p, iface_out2)
             break
         else
             self:send_pkt_with_ddc(p, iface_out2, iface_out1)
-            self.ddc_last_send = 1
-            self.last_ddc_time = cur_now
+            self.last_ddc_send = 1
+            -- send_ddc_1 = false
+            -- self.last_ddc_time[1] = cur_now
             break
         end
     end
