@@ -183,6 +183,10 @@ local function parse_cli(str, cfg)
             cfg.link1.rate_limiter.buffer_latency = base.resolve_time(value)
         elseif (key == "l2" or key == "latency2") and cfg.link2.rate_limiter ~= nil then
             cfg.link2.rate_limiter.buffer_latency = base.resolve_time(value)
+        elseif (key == "b1" or key == "buffer1") and cfg.link1.rate_limiter ~= nil then
+            cfg.link1.rate_limiter.buffer_capacity = base.resolve_number(value)
+        elseif (key == "b2" or key == "buffer2") and cfg.link2.rate_limiter ~= nil then
+            cfg.link2.rate_limiter.buffer_capacity = base.resolve_number(value)
         elseif (key == "o1" or key == "overhead1") and cfg.link1.rate_limiter ~= nil then
             cfg.link1.rate_limiter.additional_overhead = base.resolve_number(value)
         elseif (key == "o2" or key == "overhead2") and cfg.link2.rate_limiter ~= nil then
