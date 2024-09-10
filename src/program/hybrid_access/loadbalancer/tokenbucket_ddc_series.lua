@@ -48,7 +48,7 @@ function TokenBucketDDCSeries:new(conf)
         last_ddc_send = 0,
         -- ddc_cache = corrected_ddc_cache,
         -- last_ddc_time = {},
-        class_type = "TokenBucket with delay difference compensation"
+        class_type = "TokenBucket with minimal delay difference compensation"
     }
     if conf.layer1_overhead == true then
         o.additional_overhead = o.additional_overhead + 7 + 1 + 4 + 12
