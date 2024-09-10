@@ -101,7 +101,7 @@ function TokenBucketDDCSeries:push()
                 -- self.last_ddc_time[2] = cur_now
             end
         elseif self.last_ddc_send == 1 or send_ddc_1 == false then
-            self.send_pkt(p, iface_out2)
+            self:send_pkt(p, iface_out2)
             break
         else
             self:send_pkt_with_ddc(p, iface_out2, iface_out1)
