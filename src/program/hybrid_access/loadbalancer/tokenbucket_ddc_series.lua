@@ -18,7 +18,7 @@ TokenBucketDDCSeries.config = {
     -- amount of tokens
     capacity        = { required = true },
     -- multiply rate by this percentage
-    rate_percentage      = { default = 95 },
+    rate_percentage      = { default = 99 },
     -- multiply capacity by this percentage
     capacity_percentage      = { default = 99 },
     -- use layer 1 overhead
