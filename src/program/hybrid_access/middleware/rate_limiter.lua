@@ -14,7 +14,9 @@ local tonumber = tonumber
 local receive, transmit, nreadable, nwritable = link.receive, link.transmit, link.nreadable, link.nwritable
 local free = packet.free
 
-local QUEUE_LENGTH = 65536 -- 65536 * 1500 = 100M -- 100M / 625MByte = 160ms
+local QUEUE_LENGTH = 65536
+-- 65536 * 1500 = 100 MB
+-- 100 MB / 625 MB/s = 160ms (for 5 GBit/s)
 
 TBRateLimiter = {
     config = {

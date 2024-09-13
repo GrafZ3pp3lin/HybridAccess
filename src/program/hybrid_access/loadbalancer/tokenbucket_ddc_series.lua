@@ -26,7 +26,7 @@ TokenBucketDDCSeries.config = {
     -- link where ddc packets should be send (link with higher one-way delay)
     ddc_link = { required = true },
     -- how long is one ddc packet valid
-    ddc_cache = { required = false },
+    -- ddc_cache = { required = false },
     -- loadbalancer setup
     setup    = { required = false }
 }
@@ -45,7 +45,7 @@ function TokenBucketDDCSeries:new(conf)
         additional_overhead = co.HA_HEADER_LEN,
         min_pkt_size = 64,
         ddc_link = conf.ddc_link,
-        last_ddc_send = 0,
+        -- last_ddc_send = 0,
         -- ddc_cache = corrected_ddc_cache,
         -- last_ddc_time = {},
         class_type = "TokenBucket with minimal delay difference compensation"
@@ -92,21 +92,21 @@ function TokenBucketDDCSeries:push()
 
         if length <= self.contingent then
             self.contingent = self.contingent - length
-            if self.last_ddc_send == 2 or send_ddc_2 == false then
+            if send_ddc_2 == false then
                 self:send_pkt(p, iface_out1)
             else
                 self:send_pkt_with_ddc(p, iface_out1, iface_out2)
-                self.last_ddc_send = 2
-                -- send_ddc_2 = false
+                send_ddc_2 = false
+                -- self.last_ddc_send = 2
                 -- self.last_ddc_time[2] = cur_now
             end
-        elseif self.last_ddc_send == 1 or send_ddc_1 == false then
+        elseif send_ddc_1 == false then
             self:send_pkt(p, iface_out2)
             break
         else
             self:send_pkt_with_ddc(p, iface_out2, iface_out1)
-            self.last_ddc_send = 1
-            -- send_ddc_1 = false
+            send_ddc_1 = false
+            -- self.last_ddc_send = 1
             -- self.last_ddc_time[1] = cur_now
             break
         end
