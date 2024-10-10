@@ -51,6 +51,7 @@ function TokenBucketDDCSeries:new(conf)
     end
 
     print(string.format("tokenbucket ddc: %20s byte/s (%f%%), %20s capacity (%f%%)", lib.comma_value(o.byte_rate), conf.rate_percentage, lib.comma_value(o.capacity), conf.capacity_percentage))
+    print(string.format("ddc link: %d, ddc skip limit: %d", o.ddc_link, o.ddc_skip_limit))
 
     setmetatable(o, self)
     self.__index = self
