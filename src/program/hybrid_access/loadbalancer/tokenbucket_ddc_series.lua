@@ -25,8 +25,8 @@ TokenBucketDDCSeries.config = {
     layer1_overhead = { default = true },
     -- link where ddc packets should be send (link with higher one-way delay)
     ddc_link = { required = true },
-    -- how long is one ddc packet valid
-    -- ddc_cache = { required = false },
+    -- how many normal packets can be send in a row before a ddc packet has to follow (per link)
+    ddc_skip_limit = { default = 0 },
     -- loadbalancer setup
     setup    = { required = false }
 }
@@ -34,10 +34,7 @@ TokenBucketDDCSeries.config = {
 function TokenBucketDDCSeries:new(conf)
     local rp = conf.rate_percentage / 100
     local cp = conf.capacity_percentage / 100
-    -- local corrected_ddc_cache = {}
-    -- for i, value in ipairs(conf.ddc_cache) do
-    --     corrected_ddc_cache[i] = value / 1e9
-    -- end
+
     local o = {
         byte_rate = math.floor((conf.rate * rp) / 8),
         capacity = math.floor(conf.capacity * cp),
@@ -45,9 +42,7 @@ function TokenBucketDDCSeries:new(conf)
         additional_overhead = co.HA_HEADER_LEN,
         min_pkt_size = 64,
         ddc_link = conf.ddc_link,
-        -- last_ddc_send = 0,
-        -- ddc_cache = corrected_ddc_cache,
-        -- last_ddc_time = {},
+        ddc_skip_limit = conf.ddc_skip_limit,
         class_type = "TokenBucket with minimal delay difference compensation"
     }
     if conf.layer1_overhead == true then
@@ -81,10 +76,10 @@ function TokenBucketDDCSeries:push()
     )
     self.last_time = cur_now
 
-    -- local send_ddc_1 = (self.ddc_link == 1 or self.ddc_link == 0) and (self.last_ddc_time[1] or cur_now) + self.ddc_cache[1] <= cur_now
-    -- local send_ddc_2 = (self.ddc_link == 2 or self.ddc_link == 0) and (self.last_ddc_time[2] or cur_now) + self.ddc_cache[2] <= cur_now
     local send_ddc_1 = self.ddc_link == 1 or self.ddc_link == 0
     local send_ddc_2 = self.ddc_link == 2 or self.ddc_link == 0
+    local send_index_1 = 0
+    local send_index_2 = 0
 
     while not empty(iface_in) do
         local p = receive(iface_in)
@@ -92,28 +87,34 @@ function TokenBucketDDCSeries:push()
 
         if length <= self.contingent then
             self.contingent = self.contingent - length
-            if send_ddc_2 == false then
+            if send_ddc_2 == false and (self.ddc_skip_limit <= 0 or send_index_1 < self.ddc_skip_limit) then
                 self:send_pkt(p, iface_out1)
+                send_index_1 = send_index_1 + 1
             else
                 self:send_pkt_with_ddc(p, iface_out1, iface_out2)
+                send_index_1 = 1
                 send_ddc_2 = false
-                -- self.last_ddc_send = 2
-                -- self.last_ddc_time[2] = cur_now
             end
-        elseif send_ddc_1 == false then
+        elseif send_ddc_1 == false and (self.ddc_skip_limit <= 0 or send_index_2 < self.ddc_skip_limit) then
             self:send_pkt(p, iface_out2)
+            send_index_2 = send_index_2 + 1
             break
         else
             self:send_pkt_with_ddc(p, iface_out2, iface_out1)
+            send_index_2 = 1
             send_ddc_1 = false
-            -- self.last_ddc_send = 1
-            -- self.last_ddc_time[1] = cur_now
             break
         end
     end
     while not empty(iface_in) do
         -- send rest of packages to output 2 - ddc packet was already send
         local p = receive(iface_in)
-        self:send_pkt(p, iface_out2)
+        if self.ddc_skip_limit <= 0 or send_index_2 < self.ddc_skip_limit then
+            self:send_pkt(p, iface_out2)
+            send_index_2 = send_index_2 + 1
+        else
+            self:send_pkt_with_ddc(p, iface_out2, iface_out1)
+            send_index_2 = 1
+        end
     end
 end
